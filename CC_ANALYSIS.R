@@ -1,42 +1,825 @@
 
+library(tidyverse)
+library(lubridate)
+
+#### RCP 4.5 ####
+
+
+# Periods definition
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+
+#### Model 4 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_4_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp45_wb) <- colnmss
+
+mod_4_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp45_aqu) <- colnmsss
+
+mod_4_rcp45_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp45_reservoir) <- colnmssss
+
+#mod_4_rcp45_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_4_rcp45_flocha) <- colnmsssss
+
+#mod_4_rcp45_flocha <- mod_4_rcp45_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 4, escenario = "RCP 4.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_4_rcp45_wb <- mod_4_rcp45_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                                latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_4_rcp45_basinaqu_wb <- mod_4_rcp45_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                        seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_4_rcp45_reservoir <- mod_4_rcp45_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_4_rcp45_wb_yr <- mod_4_rcp45_wb %>% left_join(., mod_4_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+                    group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_4_rcp45_wb_yrmon <- mod_4_rcp45_wb %>% left_join(., mod_4_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+                    group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_4_rcp45_reservoir_yr <- mod_4_rcp45_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenairo = "RCP 4.5")
+  
+mod_4_rcp45_reservoir_yrmon <-  mod_4_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenairo = "RCP 4.5")
+
+
+
+# Introduction of periods
+
+mod_4_rcp45_wb_yr <- mod_4_rcp45_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                year %in% midterm_period ~ "midterm", 
+                                                year %in% longterm_period ~ "longterm", 
+                                                .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_4_rcp45_wb_yrmon <- mod_4_rcp45_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                year %in% midterm_period ~ "midterm", 
+                                                year %in% longterm_period ~ "longterm", 
+                                                .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_4_rcp45 <- mod_4_rcp45_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_4_45 <- average_wb_periods_mod_4_rcp45[1,]
+
+average_month_wb_periods_mod_4_rcp45 <- mod_4_rcp45_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_4_45 <- average_month_wb_periods_mod_4_rcp45[average_month_wb_periods_mod_4_rcp45$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_4_45_average_anomalies <- average_wb_periods_mod_4_rcp45 %>% mutate(pcp_anom = (precip - ref_values_mod_4_45$precip) / ref_values_mod_4_45$precip,
+                              et_anom = (et - ref_values_mod_4_45$et)/ref_values_mod_4_45$et,
+                              pet_anom = (pet - ref_values_mod_4_45$pet)/ref_values_mod_4_45$pet,
+                              perc_anom = (perc - ref_values_mod_4_45$perc)/ref_values_mod_4_45$perc,
+                              rchrg_anom = (rchrg - ref_values_mod_4_45$rchrg)/ref_values_mod_4_45$rchrg,
+                              wyld_anom = (wyld - ref_values_mod_4_45$wyld)/ref_values_mod_4_45$wyld,
+                              surq_anom = (surq - ref_values_mod_4_45$surq)/ref_values_mod_4_45$surq,
+                              latq_anom = (latq - ref_values_mod_4_45$latq)/ref_values_mod_4_45$latq,
+                              gwflo_anom = (gwflo - ref_values_mod_4_45$gwflo)/ref_values_mod_4_45$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_4_45_average_changes <- average_wb_periods_mod_4_rcp45 %>% mutate(pcp_chg = (precip - ref_values_mod_4_45$precip),
+                              et_chg = (et - ref_values_mod_4_45$et),
+                              pet_chg = (pet - ref_values_mod_4_45$pet),
+                              perc_chg = (perc - ref_values_mod_4_45$perc),
+                              rchrg_chg = (rchrg - ref_values_mod_4_45$rchrg),
+                              wyld_chg = (wyld - ref_values_mod_4_45$wyld),
+                              surq_chg = (surq - ref_values_mod_4_45$surq),
+                              latq_chg = (latq - ref_values_mod_4_45$latq),
+                              gwflo_chg = (gwflo - ref_values_mod_4_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_4_45_year_anomalies <-  mod_4_rcp45_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_4_45$precip) / ref_values_mod_4_45$precip,
+               et_anom = (et - ref_values_mod_4_45$et)/ref_values_mod_4_45$et,
+               pet_anom = (pet - ref_values_mod_4_45$pet)/ref_values_mod_4_45$pet,
+               perc_anom = (perc - ref_values_mod_4_45$perc)/ref_values_mod_4_45$perc,
+               rchrg_anom = (rchrg - ref_values_mod_4_45$rchrg)/ref_values_mod_4_45$rchrg,
+               wyld_anom = (wyld - ref_values_mod_4_45$wyld)/ref_values_mod_4_45$wyld,
+               surq_anom = (surq - ref_values_mod_4_45$surq)/ref_values_mod_4_45$surq,
+               latq_anom = (latq - ref_values_mod_4_45$latq)/ref_values_mod_4_45$latq,
+               gwflo_anom = (gwflo - ref_values_mod_4_45$gwflo)/ref_values_mod_4_45$gwflo) %>% 
+               mutate(model = 4, escenario = "RCP 4.5")
+
+
+mod_4_45_year_changes <- mod_4_rcp45_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_4_45$precip),
+                                                                      et_chg = (et - ref_values_mod_4_45$et),
+                                                                      pet_chg = (pet - ref_values_mod_4_45$pet),
+                                                                      perc_chg = (perc - ref_values_mod_4_45$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_4_45$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_4_45$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_4_45$surq),
+                                                                      latq_chg = (latq - ref_values_mod_4_45$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_4_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 4.5")
+
+
+mod_4_rcp45_month_anomaly <- mod_4_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_4_45 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 4.5")
+
+
+mod_4_rcp45_month_chg <- mod_4_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_4_45 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 4.5")
+  
+
+
+# Periods definition
+
+# rm(list = ls())
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+#### Model 6 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_6_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp45_wb) <- colnmss
+
+mod_6_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp45_aqu) <- colnmsss
+
+mod_6_rcp45_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp45_reservoir) <- colnmssss
+
+#mod_6_rcp45_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_6_RACMO22/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_6_rcp45_flocha) <- colnmsssss
+#
+#mod_6_rcp45_flocha <- mod_6_rcp45_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 6, escenario = "RCP 4.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_6_rcp45_wb <- mod_6_rcp45_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_6_rcp45_basinaqu_wb <- mod_6_rcp45_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_6_rcp45_reservoir <- mod_6_rcp45_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_6_rcp45_wb_yr <- mod_6_rcp45_wb %>% left_join(., mod_6_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_6_rcp45_wb_yrmon <- mod_6_rcp45_wb %>% left_join(., mod_6_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_6_rcp45_reservoir_yr <- mod_6_rcp45_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenairo = "RCP 4.5")
+
+mod_6_rcp45_reservoir_yrmon <-  mod_6_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenairo = "RCP 4.5")
+
+
+
+# Introduction of periods
+
+mod_6_rcp45_wb_yr <- mod_6_rcp45_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_6_rcp45_wb_yrmon <- mod_6_rcp45_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_6_rcp45 <- mod_6_rcp45_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_6_45 <- average_wb_periods_mod_6_rcp45[1,]
+
+average_month_wb_periods_mod_6_rcp45 <- mod_6_rcp45_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_6_45 <- average_month_wb_periods_mod_6_rcp45[average_month_wb_periods_mod_6_rcp45$periodo == "baseline",]
+
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_6_45_average_anomalies <- average_wb_periods_mod_6_rcp45 %>% mutate(pcp_anom = (precip - ref_values_mod_6_45$precip) / ref_values_mod_6_45$precip,
+                                                                        et_anom = (et - ref_values_mod_6_45$et)/ref_values_mod_6_45$et,
+                                                                        pet_anom = (pet - ref_values_mod_6_45$pet)/ref_values_mod_6_45$pet,
+                                                                        perc_anom = (perc - ref_values_mod_6_45$perc)/ref_values_mod_6_45$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_6_45$rchrg)/ref_values_mod_6_45$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_6_45$wyld)/ref_values_mod_6_45$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_6_45$surq)/ref_values_mod_6_45$surq,
+                                                                        latq_anom = (latq - ref_values_mod_6_45$latq)/ref_values_mod_6_45$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_6_45$gwflo)/ref_values_mod_6_45$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_6_45_average_changes <- average_wb_periods_mod_6_rcp45 %>% mutate(pcp_chg = (precip - ref_values_mod_6_45$precip),
+                                                                      et_chg = (et - ref_values_mod_6_45$et),
+                                                                      pet_chg = (pet - ref_values_mod_6_45$pet),
+                                                                      perc_chg = (perc - ref_values_mod_6_45$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_6_45$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_6_45$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_6_45$surq),
+                                                                      latq_chg = (latq - ref_values_mod_6_45$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_6_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_6_45_year_anomalies <-  mod_6_rcp45_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_6_45$precip) / ref_values_mod_6_45$precip,
+                                                         et_anom = (et - ref_values_mod_6_45$et)/ref_values_mod_6_45$et,
+                                                         pet_anom = (pet - ref_values_mod_6_45$pet)/ref_values_mod_6_45$pet,
+                                                         perc_anom = (perc - ref_values_mod_6_45$perc)/ref_values_mod_6_45$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_6_45$rchrg)/ref_values_mod_6_45$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_6_45$wyld)/ref_values_mod_6_45$wyld,
+                                                         surq_anom = (surq - ref_values_mod_6_45$surq)/ref_values_mod_6_45$surq,
+                                                         latq_anom = (latq - ref_values_mod_6_45$latq)/ref_values_mod_6_45$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_6_45$gwflo)/ref_values_mod_6_45$gwflo) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")
+
+
+mod_6_45_year_changes <- mod_6_rcp45_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_6_45$precip),
+                                                      et_chg = (et - ref_values_mod_6_45$et),
+                                                      pet_chg = (pet - ref_values_mod_6_45$pet),
+                                                      perc_chg = (perc - ref_values_mod_6_45$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_6_45$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_6_45$wyld),
+                                                      surq_chg = (surq - ref_values_mod_6_45$surq),
+                                                      latq_chg = (latq - ref_values_mod_6_45$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_6_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")
+
+
+
+mod_6_rcp45_month_anomaly <- mod_6_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_6_45 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")
+
+
+mod_6_rcp45_month_chg <- mod_6_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_6_45 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 4.5")
+
+
+
+
+
+# Periods definition
+# rm(list = ls())
+
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+#### Model 7 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_7_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp45_wb) <- colnmss
+
+mod_7_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp45_aqu) <- colnmsss
+
+mod_7_rcp45_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp45_reservoir) <- colnmssss
+
+#mod_7_rcp45_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_7_DMI-HIRHAM/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_7_rcp45_flocha) <- colnmsssss
+#
+#mod_7_rcp45_flocha <- mod_7_rcp45_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 7, escenario = "RCP 4.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_7_rcp45_wb <- mod_7_rcp45_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_7_rcp45_basinaqu_wb <- mod_7_rcp45_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_7_rcp45_reservoir <- mod_7_rcp45_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_7_rcp45_wb_yr <- mod_7_rcp45_wb %>% left_join(., mod_7_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_7_rcp45_wb_yrmon <- mod_7_rcp45_wb %>% left_join(., mod_7_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_7_rcp45_reservoir_yr <- mod_7_rcp45_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenairo = "RCP 4.5")
+
+mod_7_rcp45_reservoir_yrmon <-  mod_7_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenairo = "RCP 4.5")
+
+
+
+# Introduction of periods
+
+mod_7_rcp45_wb_yr <- mod_7_rcp45_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_7_rcp45_wb_yrmon <- mod_7_rcp45_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_7_rcp45 <- mod_7_rcp45_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_7_45 <- average_wb_periods_mod_7_rcp45[1,]
+
+
+average_month_wb_periods_mod_7_rcp45 <- mod_7_rcp45_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+
+ref_month_values_mod_7_45 <- average_month_wb_periods_mod_7_rcp45[average_month_wb_periods_mod_7_rcp45$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_7_45_average_anomalies <- average_wb_periods_mod_7_rcp45 %>% mutate(pcp_anom = (precip - ref_values_mod_7_45$precip) / ref_values_mod_7_45$precip,
+                                                                        et_anom = (et - ref_values_mod_7_45$et)/ref_values_mod_7_45$et,
+                                                                        pet_anom = (pet - ref_values_mod_7_45$pet)/ref_values_mod_7_45$pet,
+                                                                        perc_anom = (perc - ref_values_mod_7_45$perc)/ref_values_mod_7_45$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_7_45$rchrg)/ref_values_mod_7_45$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_7_45$wyld)/ref_values_mod_7_45$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_7_45$surq)/ref_values_mod_7_45$surq,
+                                                                        latq_anom = (latq - ref_values_mod_7_45$latq)/ref_values_mod_7_45$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_7_45$gwflo)/ref_values_mod_7_45$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_7_45_average_changes <- average_wb_periods_mod_7_rcp45 %>% mutate(pcp_chg = (precip - ref_values_mod_7_45$precip),
+                                                                      et_chg = (et - ref_values_mod_7_45$et),
+                                                                      pet_chg = (pet - ref_values_mod_7_45$pet),
+                                                                      perc_chg = (perc - ref_values_mod_7_45$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_7_45$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_7_45$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_7_45$surq),
+                                                                      latq_chg = (latq - ref_values_mod_7_45$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_7_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_7_45_year_anomalies <-  mod_7_rcp45_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_7_45$precip) / ref_values_mod_7_45$precip,
+                                                         et_anom = (et - ref_values_mod_7_45$et)/ref_values_mod_7_45$et,
+                                                         pet_anom = (pet - ref_values_mod_7_45$pet)/ref_values_mod_7_45$pet,
+                                                         perc_anom = (perc - ref_values_mod_7_45$perc)/ref_values_mod_7_45$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_7_45$rchrg)/ref_values_mod_7_45$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_7_45$wyld)/ref_values_mod_7_45$wyld,
+                                                         surq_anom = (surq - ref_values_mod_7_45$surq)/ref_values_mod_7_45$surq,
+                                                         latq_anom = (latq - ref_values_mod_7_45$latq)/ref_values_mod_7_45$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_7_45$gwflo)/ref_values_mod_7_45$gwflo) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")
+
+
+mod_7_45_year_changes <- mod_7_rcp45_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_7_45$precip),
+                                                      et_chg = (et - ref_values_mod_7_45$et),
+                                                      pet_chg = (pet - ref_values_mod_7_45$pet),
+                                                      perc_chg = (perc - ref_values_mod_7_45$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_7_45$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_7_45$wyld),
+                                                      surq_chg = (surq - ref_values_mod_7_45$surq),
+                                                      latq_chg = (latq - ref_values_mod_7_45$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_7_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")
+
+
+
+
+mod_7_rcp45_month_anomaly <- mod_7_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_7_45 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")
+
+
+mod_7_rcp45_month_chg <- mod_7_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_7_45 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 4.5")
 
 
 
 
 
 
-
-basinwb_baseline <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/Baseline/basin_wb_day.txt", skip = 3)
-
-colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/Baseline/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
-
-colnames(basinwb_baseline) <- colnmss
+# Periods definition
+# rm(list = ls())
 
 
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
 
-baseline_wb <- basinwb_baseline %>%  select(., mon, day,   yr, precip, surq_gen,surq_res, latq_cha ,latq_res, et , perc, pet )
-
-baseline_wb_yr <- baseline_wb %>% mutate(date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
-  select(., -c(day,mon,  yr)) %>% group_by(year(date)) %>% 
-  summarise_at(., c("precip", "surq_gen", "latq" , "et" , "perc", "pet"), ~sum(.))
-
+#### Model 9 ####
 
 
-baseline_aquifer <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/Baseline/basin_aqu_day.txt", skip = 3)
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_9_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp45_wb) <- colnmss
 
-colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/Baseline/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+mod_9_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp45_aqu) <- colnmsss
 
-colnames(baseline_aquifer) <- colnmsss
+mod_9_rcp45_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp45_reservoir) <- colnmssss
 
-basinaqu_wb <- baseline_aquifer %>% select(., mon, day,   yr, flo , dep_wt, stor, rchrg, seep, revap, flo_cha, flo_res   ) %>% 
-  mutate(date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
-  select(., -c(day,mon,  yr)) %>% group_by(year(date)) %>%
-  summarise_at(., c("flo" , "dep_wt", "stor", "rchrg", "seep", "revap", "flo_cha", "flo_res" ), ~sum(.))
+#mod_9_rcp45_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_9_MPI-M-MPI/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_9_rcp45_flocha) <- colnmsssss
+#
+#mod_9_rcp45_flocha <- mod_9_rcp45_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 9, escenario = "RCP 4.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_9_rcp45_wb <- mod_9_rcp45_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_9_rcp45_basinaqu_wb <- mod_9_rcp45_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_9_rcp45_reservoir <- mod_9_rcp45_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_9_rcp45_wb_yr <- mod_9_rcp45_wb %>% left_join(., mod_9_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_9_rcp45_wb_yrmon <- mod_9_rcp45_wb %>% left_join(., mod_9_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_9_rcp45_reservoir_yr <- mod_9_rcp45_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenairo = "RCP 4.5")
+
+mod_9_rcp45_reservoir_yrmon <-  mod_9_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenairo = "RCP 4.5")
+
+
+
+# Introduction of periods
+
+mod_9_rcp45_wb_yr <- mod_9_rcp45_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_9_rcp45_wb_yrmon <- mod_9_rcp45_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_9_rcp45 <- mod_9_rcp45_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_9_45 <- average_wb_periods_mod_9_rcp45[1,]
+
+
+average_month_wb_periods_mod_9_rcp45 <- mod_9_rcp45_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_9_45 <- average_month_wb_periods_mod_9_rcp45[average_month_wb_periods_mod_9_rcp45$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_9_45_average_anomalies <- average_wb_periods_mod_9_rcp45 %>% mutate(pcp_anom = (precip - ref_values_mod_9_45$precip) / ref_values_mod_9_45$precip,
+                                                                        et_anom = (et - ref_values_mod_9_45$et)/ref_values_mod_9_45$et,
+                                                                        pet_anom = (pet - ref_values_mod_9_45$pet)/ref_values_mod_9_45$pet,
+                                                                        perc_anom = (perc - ref_values_mod_9_45$perc)/ref_values_mod_9_45$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_9_45$rchrg)/ref_values_mod_9_45$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_9_45$wyld)/ref_values_mod_9_45$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_9_45$surq)/ref_values_mod_9_45$surq,
+                                                                        latq_anom = (latq - ref_values_mod_9_45$latq)/ref_values_mod_9_45$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_9_45$gwflo)/ref_values_mod_9_45$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_9_45_average_changes <- average_wb_periods_mod_9_rcp45 %>% mutate(pcp_chg = (precip - ref_values_mod_9_45$precip),
+                                                                      et_chg = (et - ref_values_mod_9_45$et),
+                                                                      pet_chg = (pet - ref_values_mod_9_45$pet),
+                                                                      perc_chg = (perc - ref_values_mod_9_45$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_9_45$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_9_45$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_9_45$surq),
+                                                                      latq_chg = (latq - ref_values_mod_9_45$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_9_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_9_45_year_anomalies <-  mod_9_rcp45_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_9_45$precip) / ref_values_mod_9_45$precip,
+                                                         et_anom = (et - ref_values_mod_9_45$et)/ref_values_mod_9_45$et,
+                                                         pet_anom = (pet - ref_values_mod_9_45$pet)/ref_values_mod_9_45$pet,
+                                                         perc_anom = (perc - ref_values_mod_9_45$perc)/ref_values_mod_9_45$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_9_45$rchrg)/ref_values_mod_9_45$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_9_45$wyld)/ref_values_mod_9_45$wyld,
+                                                         surq_anom = (surq - ref_values_mod_9_45$surq)/ref_values_mod_9_45$surq,
+                                                         latq_anom = (latq - ref_values_mod_9_45$latq)/ref_values_mod_9_45$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_9_45$gwflo)/ref_values_mod_9_45$gwflo) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")
+
+
+mod_9_45_year_changes <- mod_9_rcp45_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_9_45$precip),
+                                                      et_chg = (et - ref_values_mod_9_45$et),
+                                                      pet_chg = (pet - ref_values_mod_9_45$pet),
+                                                      perc_chg = (perc - ref_values_mod_9_45$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_9_45$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_9_45$wyld),
+                                                      surq_chg = (surq - ref_values_mod_9_45$surq),
+                                                      latq_chg = (latq - ref_values_mod_9_45$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_9_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")
 
 
 
 
+mod_9_rcp45_month_anomaly <- mod_9_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_9_45 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")
 
+
+mod_9_rcp45_month_chg <- mod_9_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_9_45 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 4.5")
+
+
+
+# Periods definition
+# rm(list = ls())
 
 
 baseline_period <- 2006:2019
@@ -44,136 +827,1657 @@ midterm_period <- 2046:2065
 longterm_period <- 2080:2099
 
 
-
-mod_4_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 3)
-
-colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
-
-colnames(mod_4_rcp45_wb) <- colnmss
+#### Model 14 ####
 
 
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_14_rcp45_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp45_wb) <- colnmss
 
+mod_14_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp45_aqu) <- colnmsss
 
-  mod_4_rcp45_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 3)
+mod_14_rcp45_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp45_reservoir) <- colnmssss
 
-colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
-
-colnames(mod_4_rcp45_aqu) <- colnmsss
-
-
-
-mod4_rcp45_wb_yr <- mod_4_rcp45_wb %>% mutate(date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
-  select(., -c(day,mon,  yr)) %>% group_by(year(date)) %>% 
-  summarise_at(., c("precip", "surq_gen", "surq_res", "latq_cha", "latq_res" , "et" , "perc", "pet"), ~sum(.)) %>% 
-  mutate(surq = surq_gen +surq_res, latq = latq_cha+ latq_res) %>%  select(., -c(surq_gen, surq_res, latq_cha, latq_res)) 
-
-
-
-mod4_rcp45_basinaqu_wb_yr <- mod_4_rcp45_aqu %>% select(., mon, day,   yr , dep_wt, stor, rchrg, seep, revap, flo_cha, flo_res   ) %>% 
-  mutate(date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
-  select(., -c(day,mon,  yr)) %>% group_by(year(date)) %>%
-  summarise_at(., c("rchrg", "seep", "revap", "flo_cha", "flo_res" ), ~sum(.)) %>% 
-  mutate(gwflo = flo_cha+flo_res) %>%  select(., -c(flo_cha ,flo_res))
+#mod_14_rcp45_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_45/TxtInOut_14_MOHC-HadGEM2/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_14_rcp45_flocha) <- colnmsssss
+#
+#mod_14_rcp45_flocha <- mod_14_rcp45_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 14, escenario = "RCP 4.5")
 
 
 
+# Analysed variables --> Daily scale
 
-aaa <- mod4_rcp45_wb_yr %>% left_join(., mod4_rcp45_basinaqu_wb_yr, "year(date)") %>% rename("year" = "year(date)") %>% 
-  mutate(wyld = surq + latq +gwflo) %>% 
+mod_14_rcp45_wb <- mod_14_rcp45_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_14_rcp45_basinaqu_wb <- mod_14_rcp45_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_14_rcp45_reservoir <- mod_14_rcp45_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_14_rcp45_wb_yr <- mod_14_rcp45_wb %>% left_join(., mod_14_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_14_rcp45_wb_yrmon <- mod_14_rcp45_wb %>% left_join(., mod_14_rcp45_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_14_rcp45_reservoir_yr <- mod_14_rcp45_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenairo = "RCP 4.5")
+
+mod_14_rcp45_reservoir_yrmon <-  mod_14_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenairo = "RCP 4.5")
+
+
+
+# Introduction of periods
+
+mod_14_rcp45_wb_yr <- mod_14_rcp45_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_14_rcp45_wb_yrmon <- mod_14_rcp45_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
   mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
                              year %in% midterm_period ~ "midterm", 
                              year %in% longterm_period ~ "longterm", 
                              .default = "other")) %>% 
-  filter(., periodo != "other") %>% 
-         mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm"))))
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
 
-average_wb_periods <- aaa %>% group_by(periodo) %>% 
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_14_rcp45 <- mod_14_rcp45_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_14_45 <- average_wb_periods_mod_14_rcp45[1,]
+
+
+average_month_wb_periods_mod_14_rcp45 <- mod_14_rcp45_wb_yrmon %>% group_by(month, periodo) %>% 
   summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
 
 
-ref_values <- average_wb_periods[1,]
-
-
-(average_wb_periods[2,-1]- ref_values[,-1])/ ref_values[,-1]
-(average_wb_periods[3,-1]- ref_values[,-1])/ ref_values[,-1]
+ref_month_values_mod_14_45 <- average_month_wb_periods_mod_14_rcp45[average_month_wb_periods_mod_14_rcp45$periodo == "baseline",]
 
 
 
-average_wb_periods %>% mutate(pcp_anom = (precip - ref_values$precip) / ref_values$precip,
-                              et_anom = (et - ref_values$et)/ref_values$et,
-                              pet_anom = (pet - ref_values$pet)/ref_values$pet,
-                              perc_anom = (perc - ref_values$perc)/ref_values$perc,
-                              rchrg_anom = (rchrg - ref_values$rchrg)/ref_values$rchrg,
-                              wyld_anom = (wyld - ref_values$wyld)/ref_values$wyld,
-                              surq_anom = (surq - ref_values$surq)/ref_values$surq,
-                              latq_anom = (latq - ref_values$latq)/ref_values$latq,
-                              gwflo_anom = (gwflo - ref_values$gwflo)/ref_values$gwflo) %>% 
+#Anomalies and changes, average and annual basis
+
+mod_14_45_average_anomalies <- average_wb_periods_mod_14_rcp45 %>% mutate(pcp_anom = (precip - ref_values_mod_14_45$precip) / ref_values_mod_14_45$precip,
+                                                                        et_anom = (et - ref_values_mod_14_45$et)/ref_values_mod_14_45$et,
+                                                                        pet_anom = (pet - ref_values_mod_14_45$pet)/ref_values_mod_14_45$pet,
+                                                                        perc_anom = (perc - ref_values_mod_14_45$perc)/ref_values_mod_14_45$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_14_45$rchrg)/ref_values_mod_14_45$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_14_45$wyld)/ref_values_mod_14_45$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_14_45$surq)/ref_values_mod_14_45$surq,
+                                                                        latq_anom = (latq - ref_values_mod_14_45$latq)/ref_values_mod_14_45$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_14_45$gwflo)/ref_values_mod_14_45$gwflo) %>% 
   mutate_if(is.numeric, ~ round(., 3)) %>% 
-  mutate(model = 4, escenario = "RCP 4.5")%>% 
+  mutate(model = 14, escenario = "RCP 4.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_14_45_average_changes <- average_wb_periods_mod_14_rcp45 %>% mutate(pcp_chg = (precip - ref_values_mod_14_45$precip),
+                                                                      et_chg = (et - ref_values_mod_14_45$et),
+                                                                      pet_chg = (pet - ref_values_mod_14_45$pet),
+                                                                      perc_chg = (perc - ref_values_mod_14_45$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_14_45$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_14_45$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_14_45$surq),
+                                                                      latq_chg = (latq - ref_values_mod_14_45$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_14_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 4.5")%>% 
   .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
 
 
 
+mod_14_45_year_anomalies <-  mod_14_rcp45_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_14_45$precip) / ref_values_mod_14_45$precip,
+                                                         et_anom = (et - ref_values_mod_14_45$et)/ref_values_mod_14_45$et,
+                                                         pet_anom = (pet - ref_values_mod_14_45$pet)/ref_values_mod_14_45$pet,
+                                                         perc_anom = (perc - ref_values_mod_14_45$perc)/ref_values_mod_14_45$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_14_45$rchrg)/ref_values_mod_14_45$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_14_45$wyld)/ref_values_mod_14_45$wyld,
+                                                         surq_anom = (surq - ref_values_mod_14_45$surq)/ref_values_mod_14_45$surq,
+                                                         latq_anom = (latq - ref_values_mod_14_45$latq)/ref_values_mod_14_45$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_14_45$gwflo)/ref_values_mod_14_45$gwflo) %>% 
+  mutate(model = 14, escenario = "RCP 4.5")
+
+
+mod_14_45_year_changes <- mod_14_rcp45_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_14_45$precip),
+                                                      et_chg = (et - ref_values_mod_14_45$et),
+                                                      pet_chg = (pet - ref_values_mod_14_45$pet),
+                                                      perc_chg = (perc - ref_values_mod_14_45$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_14_45$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_14_45$wyld),
+                                                      surq_chg = (surq - ref_values_mod_14_45$surq),
+                                                      latq_chg = (latq - ref_values_mod_14_45$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_14_45$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 4.5")
 
 
 
 
 
 
+mod_14_rcp45_month_anomaly <- mod_14_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_14_45 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 4.5")
+
+
+mod_14_rcp45_month_chg <- mod_14_rcp45_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_14_45 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 4.5")
+
+
+#### RCP 8.5 ####
+
+
+# Periods definition
+
+# rm(list = ls())
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+
+#### Model 4 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_4_rcp85_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp85_wb) <- colnmss
+
+mod_4_rcp85_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp85_aqu) <- colnmsss
+
+mod_4_rcp85_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_4_rcp85_reservoir) <- colnmssss
+
+#mod_4_rcp85_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_4_CCLM/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_4_rcp85_flocha) <- colnmsssss
+#
+#mod_4_rcp85_flocha <- mod_4_rcp85_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 4, escenario = "RCP 8.5")
 
 
 
-aaa %>% mutate(pcp_anom = (precip - ref_values$precip) / ref_values$precip,
-               et_anom = (et - ref_values$et)/ref_values$et,
-               pet_anom = (pet - ref_values$pet)/ref_values$pet,
-               perc_anom = (perc - ref_values$perc)/ref_values$perc,
-               rchrg_anom = (rchrg - ref_values$rchrg)/ref_values$rchrg,
-               wyld_anom = (wyld - ref_values$wyld)/ref_values$wyld,
-               surq_anom = (surq - ref_values$surq)/ref_values$surq,
-               latq_anom = (latq - ref_values$latq)/ref_values$latq,
-               gwflo_anom = (gwflo - ref_values$gwflo)/ref_values$gwflo) %>% 
-               mutate(model = 4, escenario = "RCP 4.5")
+# Analysed variables --> Daily scale
+
+mod_4_rcp85_wb <- mod_4_rcp85_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_4_rcp85_basinaqu_wb <- mod_4_rcp85_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_4_rcp85_reservoir <- mod_4_rcp85_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_4_rcp85_wb_yr <- mod_4_rcp85_wb %>% left_join(., mod_4_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_4_rcp85_wb_yrmon <- mod_4_rcp85_wb %>% left_join(., mod_4_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_4_rcp85_reservoir_yr <- mod_4_rcp85_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenairo = "RCP 8.5")
+
+mod_4_rcp85_reservoir_yrmon <-  mod_4_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenairo = "RCP 8.5")
+
+
+
+# Introduction of periods
+
+mod_4_rcp85_wb_yr <- mod_4_rcp85_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_4_rcp85_wb_yrmon <- mod_4_rcp85_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_4_rcp85 <- mod_4_rcp85_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_4_85 <- average_wb_periods_mod_4_rcp85[1,]
+
+
+average_month_wb_periods_mod_4_rcp85 <- mod_4_rcp85_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_4_85 <- average_month_wb_periods_mod_4_rcp85[average_month_wb_periods_mod_4_rcp85$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_4_85_average_anomalies <- average_wb_periods_mod_4_rcp85 %>% mutate(pcp_anom = (precip - ref_values_mod_4_85$precip) / ref_values_mod_4_85$precip,
+                                                                        et_anom = (et - ref_values_mod_4_85$et)/ref_values_mod_4_85$et,
+                                                                        pet_anom = (pet - ref_values_mod_4_85$pet)/ref_values_mod_4_85$pet,
+                                                                        perc_anom = (perc - ref_values_mod_4_85$perc)/ref_values_mod_4_85$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_4_85$rchrg)/ref_values_mod_4_85$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_4_85$wyld)/ref_values_mod_4_85$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_4_85$surq)/ref_values_mod_4_85$surq,
+                                                                        latq_anom = (latq - ref_values_mod_4_85$latq)/ref_values_mod_4_85$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_4_85$gwflo)/ref_values_mod_4_85$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_4_85_average_changes <- average_wb_periods_mod_4_rcp85 %>% mutate(pcp_chg = (precip - ref_values_mod_4_85$precip),
+                                                                      et_chg = (et - ref_values_mod_4_85$et),
+                                                                      pet_chg = (pet - ref_values_mod_4_85$pet),
+                                                                      perc_chg = (perc - ref_values_mod_4_85$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_4_85$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_4_85$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_4_85$surq),
+                                                                      latq_chg = (latq - ref_values_mod_4_85$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_4_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_4_85_year_anomalies <-  mod_4_rcp85_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_4_85$precip) / ref_values_mod_4_85$precip,
+                                                         et_anom = (et - ref_values_mod_4_85$et)/ref_values_mod_4_85$et,
+                                                         pet_anom = (pet - ref_values_mod_4_85$pet)/ref_values_mod_4_85$pet,
+                                                         perc_anom = (perc - ref_values_mod_4_85$perc)/ref_values_mod_4_85$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_4_85$rchrg)/ref_values_mod_4_85$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_4_85$wyld)/ref_values_mod_4_85$wyld,
+                                                         surq_anom = (surq - ref_values_mod_4_85$surq)/ref_values_mod_4_85$surq,
+                                                         latq_anom = (latq - ref_values_mod_4_85$latq)/ref_values_mod_4_85$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_4_85$gwflo)/ref_values_mod_4_85$gwflo) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")
+
+
+mod_4_85_year_changes <- mod_4_rcp85_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_4_85$precip),
+                                                      et_chg = (et - ref_values_mod_4_85$et),
+                                                      pet_chg = (pet - ref_values_mod_4_85$pet),
+                                                      perc_chg = (perc - ref_values_mod_4_85$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_4_85$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_4_85$wyld),
+                                                      surq_chg = (surq - ref_values_mod_4_85$surq),
+                                                      latq_chg = (latq - ref_values_mod_4_85$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_4_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")
+
+
+
+
+
+mod_4_rcp85_month_anomaly <- mod_4_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_4_85 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")
+
+
+mod_4_rcp85_month_chg <- mod_4_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_4_85 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 4, escenario = "RCP 8.5")
+
+
+
+
+
+# Periods definition
+# rm(list = ls())
+
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+#### Model 6 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_6_rcp85_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp85_wb) <- colnmss
+
+mod_6_rcp85_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp85_aqu) <- colnmsss
+
+mod_6_rcp85_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_6_rcp85_reservoir) <- colnmssss
+
+#mod_6_rcp85_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_6_RACMO22/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_6_rcp85_flocha) <- colnmsssss
+#
+#mod_6_rcp85_flocha <- mod_6_rcp85_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 6, escenario = "RCP 8.5")
+#
+
+
+# Analysed variables --> Daily scale
+
+mod_6_rcp85_wb <- mod_6_rcp85_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_6_rcp85_basinaqu_wb <- mod_6_rcp85_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_6_rcp85_reservoir <- mod_6_rcp85_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_6_rcp85_wb_yr <- mod_6_rcp85_wb %>% left_join(., mod_6_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_6_rcp85_wb_yrmon <- mod_6_rcp85_wb %>% left_join(., mod_6_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_6_rcp85_reservoir_yr <- mod_6_rcp85_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenairo = "RCP 8.5")
+
+mod_6_rcp85_reservoir_yrmon <-  mod_6_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenairo = "RCP 8.5")
+
+
+
+# Introduction of periods
+
+mod_6_rcp85_wb_yr <- mod_6_rcp85_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_6_rcp85_wb_yrmon <- mod_6_rcp85_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_6_rcp85 <- mod_6_rcp85_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_6_85 <- average_wb_periods_mod_6_rcp85[1,]
+
+
+average_month_wb_periods_mod_6_rcp85 <- mod_6_rcp85_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_6_85 <- average_month_wb_periods_mod_6_rcp85[average_month_wb_periods_mod_6_rcp85$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_6_85_average_anomalies <- average_wb_periods_mod_6_rcp85 %>% mutate(pcp_anom = (precip - ref_values_mod_6_85$precip) / ref_values_mod_6_85$precip,
+                                                                        et_anom = (et - ref_values_mod_6_85$et)/ref_values_mod_6_85$et,
+                                                                        pet_anom = (pet - ref_values_mod_6_85$pet)/ref_values_mod_6_85$pet,
+                                                                        perc_anom = (perc - ref_values_mod_6_85$perc)/ref_values_mod_6_85$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_6_85$rchrg)/ref_values_mod_6_85$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_6_85$wyld)/ref_values_mod_6_85$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_6_85$surq)/ref_values_mod_6_85$surq,
+                                                                        latq_anom = (latq - ref_values_mod_6_85$latq)/ref_values_mod_6_85$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_6_85$gwflo)/ref_values_mod_6_85$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_6_85_average_changes <- average_wb_periods_mod_6_rcp85 %>% mutate(pcp_chg = (precip - ref_values_mod_6_85$precip),
+                                                                      et_chg = (et - ref_values_mod_6_85$et),
+                                                                      pet_chg = (pet - ref_values_mod_6_85$pet),
+                                                                      perc_chg = (perc - ref_values_mod_6_85$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_6_85$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_6_85$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_6_85$surq),
+                                                                      latq_chg = (latq - ref_values_mod_6_85$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_6_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_6_85_year_anomalies <-  mod_6_rcp85_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_6_85$precip) / ref_values_mod_6_85$precip,
+                                                         et_anom = (et - ref_values_mod_6_85$et)/ref_values_mod_6_85$et,
+                                                         pet_anom = (pet - ref_values_mod_6_85$pet)/ref_values_mod_6_85$pet,
+                                                         perc_anom = (perc - ref_values_mod_6_85$perc)/ref_values_mod_6_85$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_6_85$rchrg)/ref_values_mod_6_85$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_6_85$wyld)/ref_values_mod_6_85$wyld,
+                                                         surq_anom = (surq - ref_values_mod_6_85$surq)/ref_values_mod_6_85$surq,
+                                                         latq_anom = (latq - ref_values_mod_6_85$latq)/ref_values_mod_6_85$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_6_85$gwflo)/ref_values_mod_6_85$gwflo) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")
+
+
+mod_6_85_year_changes <- mod_6_rcp85_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_6_85$precip),
+                                                      et_chg = (et - ref_values_mod_6_85$et),
+                                                      pet_chg = (pet - ref_values_mod_6_85$pet),
+                                                      perc_chg = (perc - ref_values_mod_6_85$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_6_85$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_6_85$wyld),
+                                                      surq_chg = (surq - ref_values_mod_6_85$surq),
+                                                      latq_chg = (latq - ref_values_mod_6_85$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_6_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")
+
+
+
+
+
+mod_6_rcp85_month_anomaly <- mod_6_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_6_85 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")
+
+
+mod_6_rcp85_month_chg <- mod_6_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_6_85 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 6, escenario = "RCP 8.5")
+
+
+# Periods definition
+# rm(list = ls())
+
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+#### Model 7 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_7_rcp85_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp85_wb) <- colnmss
+
+mod_7_rcp85_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp85_aqu) <- colnmsss
+
+mod_7_rcp85_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_7_rcp85_reservoir) <- colnmssss
+
+#mod_7_rcp85_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_7_DMI-HIRHAM/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_7_rcp85_flocha) <- colnmsssss
+#
+#mod_7_rcp85_flocha <- mod_7_rcp85_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 7, escenario = "RCP 8.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_7_rcp85_wb <- mod_7_rcp85_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_7_rcp85_basinaqu_wb <- mod_7_rcp85_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_7_rcp85_reservoir <- mod_7_rcp85_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_7_rcp85_wb_yr <- mod_7_rcp85_wb %>% left_join(., mod_7_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_7_rcp85_wb_yrmon <- mod_7_rcp85_wb %>% left_join(., mod_7_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_7_rcp85_reservoir_yr <- mod_7_rcp85_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenairo = "RCP 8.5")
+
+mod_7_rcp85_reservoir_yrmon <-  mod_7_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenairo = "RCP 8.5")
+
+
+
+# Introduction of periods
+
+mod_7_rcp85_wb_yr <- mod_7_rcp85_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_7_rcp85_wb_yrmon <- mod_7_rcp85_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_7_rcp85 <- mod_7_rcp85_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_7_85 <- average_wb_periods_mod_7_rcp85[1,]
+
+
+average_month_wb_periods_mod_7_rcp85 <- mod_7_rcp85_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+
+ref_month_values_mod_7_85 <- average_month_wb_periods_mod_7_rcp85[average_month_wb_periods_mod_7_rcp85$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_7_85_average_anomalies <- average_wb_periods_mod_7_rcp85 %>% mutate(pcp_anom = (precip - ref_values_mod_7_85$precip) / ref_values_mod_7_85$precip,
+                                                                        et_anom = (et - ref_values_mod_7_85$et)/ref_values_mod_7_85$et,
+                                                                        pet_anom = (pet - ref_values_mod_7_85$pet)/ref_values_mod_7_85$pet,
+                                                                        perc_anom = (perc - ref_values_mod_7_85$perc)/ref_values_mod_7_85$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_7_85$rchrg)/ref_values_mod_7_85$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_7_85$wyld)/ref_values_mod_7_85$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_7_85$surq)/ref_values_mod_7_85$surq,
+                                                                        latq_anom = (latq - ref_values_mod_7_85$latq)/ref_values_mod_7_85$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_7_85$gwflo)/ref_values_mod_7_85$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_7_85_average_changes <- average_wb_periods_mod_7_rcp85 %>% mutate(pcp_chg = (precip - ref_values_mod_7_85$precip),
+                                                                      et_chg = (et - ref_values_mod_7_85$et),
+                                                                      pet_chg = (pet - ref_values_mod_7_85$pet),
+                                                                      perc_chg = (perc - ref_values_mod_7_85$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_7_85$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_7_85$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_7_85$surq),
+                                                                      latq_chg = (latq - ref_values_mod_7_85$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_7_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_7_85_year_anomalies <-  mod_7_rcp85_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_7_85$precip) / ref_values_mod_7_85$precip,
+                                                         et_anom = (et - ref_values_mod_7_85$et)/ref_values_mod_7_85$et,
+                                                         pet_anom = (pet - ref_values_mod_7_85$pet)/ref_values_mod_7_85$pet,
+                                                         perc_anom = (perc - ref_values_mod_7_85$perc)/ref_values_mod_7_85$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_7_85$rchrg)/ref_values_mod_7_85$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_7_85$wyld)/ref_values_mod_7_85$wyld,
+                                                         surq_anom = (surq - ref_values_mod_7_85$surq)/ref_values_mod_7_85$surq,
+                                                         latq_anom = (latq - ref_values_mod_7_85$latq)/ref_values_mod_7_85$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_7_85$gwflo)/ref_values_mod_7_85$gwflo) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")
+
+
+mod_7_85_year_changes <- mod_7_rcp85_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_7_85$precip),
+                                                      et_chg = (et - ref_values_mod_7_85$et),
+                                                      pet_chg = (pet - ref_values_mod_7_85$pet),
+                                                      perc_chg = (perc - ref_values_mod_7_85$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_7_85$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_7_85$wyld),
+                                                      surq_chg = (surq - ref_values_mod_7_85$surq),
+                                                      latq_chg = (latq - ref_values_mod_7_85$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_7_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")
+
+
+
+
+mod_7_rcp85_month_anomaly <- mod_7_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_7_85 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")
+
+
+mod_7_rcp85_month_chg <- mod_7_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_7_85 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 7, escenario = "RCP 8.5")
+
+
+
+# Periods definition
+# rm(list = ls())
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+#### Model 9 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_9_rcp85_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp85_wb) <- colnmss
+
+mod_9_rcp85_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp85_aqu) <- colnmsss
+
+mod_9_rcp85_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_9_rcp85_reservoir) <- colnmssss
+
+#mod_9_rcp85_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_9_MPI-M-MPI/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_9_rcp85_flocha) <- colnmsssss
+#
+#mod_9_rcp85_flocha <- mod_9_rcp85_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 9, escenario = "RCP 8.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_9_rcp85_wb <- mod_9_rcp85_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                             latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_9_rcp85_basinaqu_wb <- mod_9_rcp85_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                      seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_9_rcp85_reservoir <- mod_9_rcp85_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_9_rcp85_wb_yr <- mod_9_rcp85_wb %>% left_join(., mod_9_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_9_rcp85_wb_yrmon <- mod_9_rcp85_wb %>% left_join(., mod_9_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_9_rcp85_reservoir_yr <- mod_9_rcp85_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenairo = "RCP 8.5")
+
+mod_9_rcp85_reservoir_yrmon <-  mod_9_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenairo = "RCP 8.5")
+
+
+
+# Introduction of periods
+
+mod_9_rcp85_wb_yr <- mod_9_rcp85_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                      year %in% midterm_period ~ "midterm", 
+                                                                      year %in% longterm_period ~ "longterm", 
+                                                                      .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_9_rcp85_wb_yrmon <- mod_9_rcp85_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_9_rcp85 <- mod_9_rcp85_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_9_85 <- average_wb_periods_mod_9_rcp85[1,]
+
+
+average_month_wb_periods_mod_9_rcp85 <- mod_9_rcp85_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_9_85 <- average_month_wb_periods_mod_9_rcp85[average_month_wb_periods_mod_9_rcp85$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_9_85_average_anomalies <- average_wb_periods_mod_9_rcp85 %>% mutate(pcp_anom = (precip - ref_values_mod_9_85$precip) / ref_values_mod_9_85$precip,
+                                                                        et_anom = (et - ref_values_mod_9_85$et)/ref_values_mod_9_85$et,
+                                                                        pet_anom = (pet - ref_values_mod_9_85$pet)/ref_values_mod_9_85$pet,
+                                                                        perc_anom = (perc - ref_values_mod_9_85$perc)/ref_values_mod_9_85$perc,
+                                                                        rchrg_anom = (rchrg - ref_values_mod_9_85$rchrg)/ref_values_mod_9_85$rchrg,
+                                                                        wyld_anom = (wyld - ref_values_mod_9_85$wyld)/ref_values_mod_9_85$wyld,
+                                                                        surq_anom = (surq - ref_values_mod_9_85$surq)/ref_values_mod_9_85$surq,
+                                                                        latq_anom = (latq - ref_values_mod_9_85$latq)/ref_values_mod_9_85$latq,
+                                                                        gwflo_anom = (gwflo - ref_values_mod_9_85$gwflo)/ref_values_mod_9_85$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_9_85_average_changes <- average_wb_periods_mod_9_rcp85 %>% mutate(pcp_chg = (precip - ref_values_mod_9_85$precip),
+                                                                      et_chg = (et - ref_values_mod_9_85$et),
+                                                                      pet_chg = (pet - ref_values_mod_9_85$pet),
+                                                                      perc_chg = (perc - ref_values_mod_9_85$perc),
+                                                                      rchrg_chg = (rchrg - ref_values_mod_9_85$rchrg),
+                                                                      wyld_chg = (wyld - ref_values_mod_9_85$wyld),
+                                                                      surq_chg = (surq - ref_values_mod_9_85$surq),
+                                                                      latq_chg = (latq - ref_values_mod_9_85$latq),
+                                                                      gwflo_chg = (gwflo - ref_values_mod_9_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_9_85_year_anomalies <-  mod_9_rcp85_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_9_85$precip) / ref_values_mod_9_85$precip,
+                                                         et_anom = (et - ref_values_mod_9_85$et)/ref_values_mod_9_85$et,
+                                                         pet_anom = (pet - ref_values_mod_9_85$pet)/ref_values_mod_9_85$pet,
+                                                         perc_anom = (perc - ref_values_mod_9_85$perc)/ref_values_mod_9_85$perc,
+                                                         rchrg_anom = (rchrg - ref_values_mod_9_85$rchrg)/ref_values_mod_9_85$rchrg,
+                                                         wyld_anom = (wyld - ref_values_mod_9_85$wyld)/ref_values_mod_9_85$wyld,
+                                                         surq_anom = (surq - ref_values_mod_9_85$surq)/ref_values_mod_9_85$surq,
+                                                         latq_anom = (latq - ref_values_mod_9_85$latq)/ref_values_mod_9_85$latq,
+                                                         gwflo_anom = (gwflo - ref_values_mod_9_85$gwflo)/ref_values_mod_9_85$gwflo) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")
+
+
+mod_9_85_year_changes <- mod_9_rcp85_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_9_85$precip),
+                                                      et_chg = (et - ref_values_mod_9_85$et),
+                                                      pet_chg = (pet - ref_values_mod_9_85$pet),
+                                                      perc_chg = (perc - ref_values_mod_9_85$perc),
+                                                      rchrg_chg = (rchrg - ref_values_mod_9_85$rchrg),
+                                                      wyld_chg = (wyld - ref_values_mod_9_85$wyld),
+                                                      surq_chg = (surq - ref_values_mod_9_85$surq),
+                                                      latq_chg = (latq - ref_values_mod_9_85$latq),
+                                                      gwflo_chg = (gwflo - ref_values_mod_9_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")
+
+
+
+
+
+mod_9_rcp85_month_anomaly <- mod_9_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_9_85 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")
+
+
+mod_9_rcp85_month_chg <- mod_9_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_9_85 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 9, escenario = "RCP 8.5")
+
+
+
+
+
+# Periods definition
+# rm(list = ls())
+
+baseline_period <- 2006:2019
+midterm_period <- 2046:2065
+longterm_period <- 2080:2099
+
+
+#### Model 14 ####
+
+
+# Analysed files --> basin_wb and aquifer_basin, reservoir and channel
+mod_14_rcp85_wb <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/basin_wb_day.txt", skip = 3)
+colnmss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/basin_wb_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp85_wb) <- colnmss
+
+mod_14_rcp85_aqu <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/basin_aqu_day.txt", skip = 3)
+colnmsss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/basin_aqu_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp85_aqu) <- colnmsss
+
+mod_14_rcp85_reservoir <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/reservoir_day.txt", skip = 3)
+colnmssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/reservoir_day.txt", skip = 1, col_names = F) %>% .[1,]
+colnames(mod_14_rcp85_reservoir) <- colnmssss
+
+#mod_14_rcp85_flocha <- read.table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/channel_sd_day.txt", skip = 3)
+#colnmsssss <- read_table("C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/RCP_85/TxtInOut_14_MOHC-HadGEM2/channel_sd_day.txt", skip = 1, col_names = F) %>% .[1,]
+#colnames(mod_14_rcp85_flocha) <- colnmsssss
+#
+#mod_14_rcp85_flocha <- mod_14_rcp85_flocha %>% select(day, unit, mon, yr, flo_out) %>% mutate(date = dmy(paste(day,  mon, yr))) %>% select(., -c(day, mon, yr)) %>% 
+#  filter(unit == 5) %>% mutate(model = 14, escenario = "RCP 8.5")
+
+
+
+# Analysed variables --> Daily scale
+
+mod_14_rcp85_wb <- mod_14_rcp85_wb %>%  select(., mon, day, yr, precip, et, pet, perc,
+                                               latq_cha, latq_res, surq_gen, surq_cha) %>% 
+  mutate(surq = surq_gen+ surq_cha,
+         latq = latq_cha + latq_res, 
+         date = dmy(paste(day,mon,  yr, sep = "/"))) %>% 
+  select(date, precip, et, pet, perc,  surq,  latq)
+
+
+mod_14_rcp85_basinaqu_wb <- mod_14_rcp85_aqu %>% select(., mon, day, yr, dep_wt, stor, rchrg,
+                                                        seep, revap, flo_cha, flo_res) %>% 
+  mutate(date = dmy(paste(day,mon,  yr, sep = "/")), 
+         gwflo = flo_cha + flo_res) %>% 
+  select(., date, rchrg , stor , gwflo, revap, dep_wt)
+
+
+mod_14_rcp85_reservoir <- mod_14_rcp85_reservoir %>%  select(day, mon, yr, flo_in, flo_out, flo_stor) %>% 
+  mutate(date = dmy(paste(day, mon, yr))) %>% select(., -c(day, mon, yr))
+
+
+
+# Analysed variables --> Aggregation to monthly/yearly values
+
+mod_14_rcp85_wb_yr <- mod_14_rcp85_wb %>% left_join(., mod_14_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year = year(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+mod_14_rcp85_wb_yrmon <- mod_14_rcp85_wb %>% left_join(., mod_14_rcp85_basinaqu_wb, "date") %>% 
+  mutate(wyld = surq + latq + gwflo) %>% 
+  group_by(year(date), month(date)) %>% 
+  summarise_at(., c("precip", "et", "pet",  "perc", "rchrg", "wyld", "surq",  "latq", "gwflo"), ~ sum(.))
+
+
+mod_14_rcp85_reservoir_yr <- mod_14_rcp85_reservoir %>% group_by(year = year(date)) %>% 
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenairo = "RCP 8.5")
+
+mod_14_rcp85_reservoir_yrmon <-  mod_14_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
+  summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenairo = "RCP 8.5")
+
+
+
+# Introduction of periods
+
+mod_14_rcp85_wb_yr <- mod_14_rcp85_wb_yr %>% mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                                                                        year %in% midterm_period ~ "midterm", 
+                                                                        year %in% longterm_period ~ "longterm", 
+                                                                        .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+mod_14_rcp85_wb_yrmon <- mod_14_rcp85_wb_yrmon %>% 
+  rename(year = 'year(date)', month = 'month(date)') %>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other"))))
+
+
+
+# Average water balance for each period
+
+average_wb_periods_mod_14_rcp85 <- mod_14_rcp85_wb_yr %>% group_by(periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_values_mod_14_85 <- average_wb_periods_mod_14_rcp85[1,]
+
+
+average_month_wb_periods_mod_14_rcp85 <- mod_14_rcp85_wb_yrmon %>% group_by(month, periodo) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) 
+
+ref_month_values_mod_14_85 <- average_month_wb_periods_mod_14_rcp85[average_month_wb_periods_mod_14_rcp85$periodo == "baseline",]
+
+
+
+#Anomalies and changes, average and annual basis
+
+mod_14_85_average_anomalies <- average_wb_periods_mod_14_rcp85 %>% mutate(pcp_anom = (precip - ref_values_mod_14_85$precip) / ref_values_mod_14_85$precip,
+                                                                          et_anom = (et - ref_values_mod_14_85$et)/ref_values_mod_14_85$et,
+                                                                          pet_anom = (pet - ref_values_mod_14_85$pet)/ref_values_mod_14_85$pet,
+                                                                          perc_anom = (perc - ref_values_mod_14_85$perc)/ref_values_mod_14_85$perc,
+                                                                          rchrg_anom = (rchrg - ref_values_mod_14_85$rchrg)/ref_values_mod_14_85$rchrg,
+                                                                          wyld_anom = (wyld - ref_values_mod_14_85$wyld)/ref_values_mod_14_85$wyld,
+                                                                          surq_anom = (surq - ref_values_mod_14_85$surq)/ref_values_mod_14_85$surq,
+                                                                          latq_anom = (latq - ref_values_mod_14_85$latq)/ref_values_mod_14_85$latq,
+                                                                          gwflo_anom = (gwflo - ref_values_mod_14_85$gwflo)/ref_values_mod_14_85$gwflo) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+mod_14_85_average_changes <- average_wb_periods_mod_14_rcp85 %>% mutate(pcp_chg = (precip - ref_values_mod_14_85$precip),
+                                                                        et_chg = (et - ref_values_mod_14_85$et),
+                                                                        pet_chg = (pet - ref_values_mod_14_85$pet),
+                                                                        perc_chg = (perc - ref_values_mod_14_85$perc),
+                                                                        rchrg_chg = (rchrg - ref_values_mod_14_85$rchrg),
+                                                                        wyld_chg = (wyld - ref_values_mod_14_85$wyld),
+                                                                        surq_chg = (surq - ref_values_mod_14_85$surq),
+                                                                        latq_chg = (latq - ref_values_mod_14_85$latq),
+                                                                        gwflo_chg = (gwflo - ref_values_mod_14_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")%>% 
+  .[, c(21, 20,1, 2,11, 3,12,4,13,5,14,6,15,7,16,8,17,9,18,10,19)] 
+
+
+
+mod_14_85_year_anomalies <-  mod_14_rcp85_wb_yr %>% mutate(pcp_anom = (precip - ref_values_mod_14_85$precip) / ref_values_mod_14_85$precip,
+                                                           et_anom = (et - ref_values_mod_14_85$et)/ref_values_mod_14_85$et,
+                                                           pet_anom = (pet - ref_values_mod_14_85$pet)/ref_values_mod_14_85$pet,
+                                                           perc_anom = (perc - ref_values_mod_14_85$perc)/ref_values_mod_14_85$perc,
+                                                           rchrg_anom = (rchrg - ref_values_mod_14_85$rchrg)/ref_values_mod_14_85$rchrg,
+                                                           wyld_anom = (wyld - ref_values_mod_14_85$wyld)/ref_values_mod_14_85$wyld,
+                                                           surq_anom = (surq - ref_values_mod_14_85$surq)/ref_values_mod_14_85$surq,
+                                                           latq_anom = (latq - ref_values_mod_14_85$latq)/ref_values_mod_14_85$latq,
+                                                           gwflo_anom = (gwflo - ref_values_mod_14_85$gwflo)/ref_values_mod_14_85$gwflo) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")
+
+
+mod_14_85_year_changes <- mod_14_rcp85_wb_yr %>% mutate(pcp_chg = (precip - ref_values_mod_14_85$precip),
+                                                        et_chg = (et - ref_values_mod_14_85$et),
+                                                        pet_chg = (pet - ref_values_mod_14_85$pet),
+                                                        perc_chg = (perc - ref_values_mod_14_85$perc),
+                                                        rchrg_chg = (rchrg - ref_values_mod_14_85$rchrg),
+                                                        wyld_chg = (wyld - ref_values_mod_14_85$wyld),
+                                                        surq_chg = (surq - ref_values_mod_14_85$surq),
+                                                        latq_chg = (latq - ref_values_mod_14_85$latq),
+                                                        gwflo_chg = (gwflo - ref_values_mod_14_85$gwflo)) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")
+
+
+
+
+
+mod_14_rcp85_month_anomaly <- mod_14_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_14_85 , "month" ) %>% 
+  mutate(pcp_anom = (precip.x - precip.y )/ precip.x,
+         et_anom = (et.x - et.y )/ et.x,
+         pet_anom = (pet.x - pet.y )/ pet.x,
+         perc_anom = (perc.x - perc.y )/ perc.x,
+         rchrg_anom = (rchrg.x - rchrg.y )/ rchrg.x,
+         wyld_anom = (wyld.x - wyld.y )/ wyld.x,
+         surq_anom = (surq.x - surq.y )/ surq.x,
+         latq_anom = (latq.x - latq.y )/ latq.x,
+         gwflo_anom = (gwflo.x - gwflo.y )/ gwflo.x) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")
+
+
+mod_14_rcp85_month_chg <- mod_14_rcp85_wb_yrmon %>% 
+  left_join(., ref_month_values_mod_14_85 , "month" ) %>% 
+  mutate(pcp_chg = (precip.x - precip.y ),
+         et_chg = (et.x - et.y ),
+         pet_chg = (pet.x - pet.y ),
+         perc_chg = (perc.x - perc.y ),
+         rchrg_chg = (rchrg.x - rchrg.y ),
+         wyld_chg = (wyld.x - wyld.y ),
+         surq_chg = (surq.x - surq.y ),
+         latq_chg = (latq.x - latq.y ),
+         gwflo_chg = (gwflo.x - gwflo.y )) %>% 
+  mutate_if(is.numeric, ~ round(., 3)) %>% 
+  mutate(model = 14, escenario = "RCP 8.5")
 
 
 
 
 
 
+#### Merging results ####
+
+
+
+average_anomalies <- mod_4_45_average_anomalies %>% 
+  rbind(., mod_6_45_average_anomalies) %>%  
+  rbind(., mod_7_45_average_anomalies) %>%  
+  rbind(., mod_9_45_average_anomalies) %>%  
+  rbind(., mod_14_45_average_anomalies) %>% 
+  rbind(., mod_4_85_average_anomalies) %>%  
+  rbind(., mod_6_85_average_anomalies) %>%  
+  rbind(., mod_7_85_average_anomalies) %>%  
+  rbind(., mod_9_85_average_anomalies) %>%  
+  rbind(., mod_14_85_average_anomalies)
+
+average_anomalies %>% group_by(escenario, periodo) %>% 
+  summarise(across(ends_with("_anom"), ~mean(.))) %>% 
+  filter(., periodo != "other")# %>% write.table("average_anomalies.txt", quote = F, row.names = F)
+
+
+average_changes <- mod_4_45_average_changes %>% 
+  rbind(., mod_6_45_average_changes) %>%  
+  rbind(., mod_7_45_average_changes) %>%  
+  rbind(., mod_9_45_average_changes) %>%  
+  rbind(., mod_14_45_average_changes) %>% 
+  rbind(., mod_4_85_average_changes) %>%  
+  rbind(., mod_6_85_average_changes) %>%  
+  rbind(., mod_7_85_average_changes) %>%  
+  rbind(., mod_9_85_average_changes) %>%  
+  rbind(., mod_14_85_average_changes)
+
+
+year_anomalies <- mod_4_45_year_anomalies %>% 
+  rbind(., mod_6_45_year_anomalies) %>%  
+  rbind(., mod_7_45_year_anomalies) %>%  
+  rbind(., mod_9_45_year_anomalies) %>%  
+  rbind(., mod_14_45_year_anomalies) %>% 
+  rbind(., mod_4_85_year_anomalies) %>%  
+  rbind(., mod_6_85_year_anomalies) %>%  
+  rbind(., mod_7_85_year_anomalies) %>%  
+  rbind(., mod_9_85_year_anomalies) %>%  
+  rbind(., mod_14_85_year_anomalies)
+
+
+year_changes <- mod_4_45_year_changes %>% 
+  rbind(., mod_6_45_year_changes) %>%  
+  rbind(., mod_7_45_year_changes) %>%  
+  rbind(., mod_9_45_year_changes) %>%  
+  rbind(., mod_14_45_year_changes) %>% 
+  rbind(., mod_4_85_year_changes) %>%  
+  rbind(., mod_6_85_year_changes) %>%  
+  rbind(., mod_7_85_year_changes) %>%  
+  rbind(., mod_9_85_year_changes) %>%  
+  rbind(., mod_14_85_year_changes)
+
+
+month_anomalies <- mod_4_rcp45_month_anomaly %>% 
+  rbind(., mod_6_rcp45_month_anomaly) %>%  
+  rbind(., mod_7_rcp45_month_anomaly) %>%  
+  rbind(., mod_9_rcp45_month_anomaly) %>%  
+  rbind(., mod_14_rcp45_month_anomaly) %>% 
+  rbind(., mod_4_rcp85_month_anomaly) %>%  
+  rbind(., mod_6_rcp85_month_anomaly) %>%  
+  rbind(., mod_7_rcp85_month_anomaly) %>%  
+  rbind(., mod_9_rcp85_month_anomaly) %>%  
+  rbind(., mod_14_rcp85_month_anomaly)
+
+
+month_changes <- mod_4_rcp45_month_chg %>% 
+  rbind(., mod_6_rcp45_month_chg) %>%  
+  rbind(., mod_7_rcp45_month_chg) %>%  
+  rbind(., mod_9_rcp45_month_chg) %>%  
+  rbind(., mod_14_rcp45_month_chg) %>% 
+  rbind(., mod_4_rcp85_month_chg) %>%  
+  rbind(., mod_6_rcp85_month_chg) %>%  
+  rbind(., mod_7_rcp85_month_chg) %>%  
+  rbind(., mod_9_rcp85_month_chg) %>%  
+  rbind(., mod_14_rcp85_month_chg)
 
 
 
 
+#### YEAR ANOMALIES PLOT ####
+
+min_anomaly <- year_anomalies %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_anom", "et_anom", "pet_anom", "perc_anom",
+                    "rchrg_anom", "wyld_anom", "surq_anom", "latq_anom", "gwflo_anom"), ~ min(.)) %>% 
+  mutate(statis = "minimum")
+
+max_anomaly <- year_anomalies %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_anom", "et_anom", "pet_anom", "perc_anom",
+                    "rchrg_anom", "wyld_anom", "surq_anom", "latq_anom", "gwflo_anom"), ~ max(.))%>% 
+  mutate(statis = "maximum")
+
+mean_anomaly <- year_anomalies %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_anom", "et_anom", "pet_anom", "perc_anom",
+                    "rchrg_anom", "wyld_anom", "surq_anom", "latq_anom", "gwflo_anom"), ~ mean(.))%>% 
+  mutate(statis = "mean")
+
+
+wider_anomalies <- min_anomaly %>% rbind(., max_anomaly) %>% rbind(., mean_anomaly) %>% 
+  pivot_wider(., names_from = statis, values_from = c(ends_with("anom")))
 
 
 
-aaa %>% filter(., periodo != "other") %>%
-  mutate(wyld = latq + )
-  select(year, precip, )
-  pivot_longer(., -c(year))
-  ggplot(aes(x = year))+
-  geom_boxplot(aes(y = pet, color = periodo))
+vars <- colnames(wider_anomalies) %>% tibble() %>% mutate(vars =str_remove(., "_anom_")) %>% 
+ mutate(vars = str_remove(vars, "maximum")) %>% 
+ mutate(vars = str_remove(vars, "minimum")) %>% 
+ mutate(vars = str_remove(vars, "mean"))
 
-
-table(aaa$periodo)
+vars <- unique(vars$vars) %>% .[-c(1,2)]
 
 
 
 
+for(i in 1:length(vars)){
+
+  var <- c("Precipitation", "Evapotranspiration", "Potential evapotranspiration", "Percolation",
+           "Recharge", "Water yield", "Surface runoff", "Lateral flow", "Groundwater flow")
+  
+var_tab <- wider_anomalies %>% select(., c(year, escenario,starts_with(vars[i]))) 
+colnames(var_tab) <- c("year","escenario", "minimum", "maximum", "mean")
+
+
+plot <- var_tab %>% ggplot(., aes(x = year))+
+  geom_ribbon(aes(ymin = minimum, ymax = maximum),fill = "mediumseagreen", alpha = 0.5)+
+  geom_line(aes(y = mean), color = "springgreen4", linewidth = 0.8)+
+  theme_bw()+
+  geom_line(aes(y = 0), linetype = 2, size = 1)+
+  labs(y = var[i])+
+  facet_wrap(facets = "escenario")+
+  ggtitle("Relative change regarding baseline period average (2006-2019)")+
+  theme(text = element_text(size = 15), axis.title.x = element_blank())
+  
+ggsave(plot = plot, filename = paste("figures/relative_change/", i, "_", vars[i], ".tiff", sep = ""),
+       device = "tiff", dpi = 600, width = 12, height = 10)
+
+
+}
 
 
 
+#### YEAR CHANGES PLOT ####
+
+
+year_changes <- mod_4_45_year_changes %>% 
+  rbind(., mod_6_45_year_changes) %>%  
+  rbind(., mod_7_45_year_changes) %>%  
+  rbind(., mod_9_45_year_changes) %>%  
+  rbind(., mod_14_45_year_changes) %>% 
+  rbind(., mod_4_85_year_changes) %>%  
+  rbind(., mod_6_85_year_changes) %>%  
+  rbind(., mod_7_85_year_changes) %>%  
+  rbind(., mod_9_85_year_changes) %>%  
+  rbind(., mod_14_85_year_changes)
 
 
 
+min_chg <- year_changes %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_chg", "et_chg", "pet_chg", "perc_chg",
+                    "rchrg_chg", "wyld_chg", "surq_chg", "latq_chg", "gwflo_chg"), ~ min(.)) %>% 
+  mutate(statis = "minimum")
+
+max_chg <- year_changes %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_chg", "et_chg", "pet_chg", "perc_chg",
+                    "rchrg_chg", "wyld_chg", "surq_chg", "latq_chg", "gwflo_chg"), ~ max(.))%>% 
+  mutate(statis = "maximum")
+
+mean_chg <- year_changes %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("pcp_chg", "et_chg", "pet_chg", "perc_chg",
+                    "rchrg_chg", "wyld_chg", "surq_chg", "latq_chg", "gwflo_chg"), ~ mean(.))%>% 
+  mutate(statis = "mean")
+
+
+wider_changes <- min_chg %>% rbind(., max_chg) %>% rbind(., mean_chg) %>% 
+  pivot_wider(., names_from = statis, values_from = c(ends_with("chg")))
 
 
 
+vars <- colnames(wider_changes) %>% tibble() %>% mutate(vars =str_remove(., "_chg_")) %>% 
+  mutate(vars = str_remove(vars, "maximum")) %>% 
+  mutate(vars = str_remove(vars, "minimum")) %>% 
+  mutate(vars = str_remove(vars, "mean"))
+
+vars <- unique(vars$vars) %>% .[-c(1,2)]
+
+
+for(i in 1:length(vars)){
+
+  var <- c("Precipitation (mm)", "Evapotranspiration (mm)", "Potential evapotranspiration (mm)", "Percolation (mm)",
+           "Recharge (mm)", "Water yield (mm)", "Surface runoff (mm)", "Lateral flow (mm)", "Groundwater flow (mm)")
+  
+var_tab <- wider_changes %>% select(., c(year, escenario,starts_with(vars[i]))) 
+colnames(var_tab) <- c("year","escenario", "minimum", "maximum", "mean")
+
+
+plot <- var_tab %>% ggplot(., aes(x = year))+
+  geom_ribbon(aes(ymin = minimum, ymax = maximum),fill = "skyblue", alpha = 0.5)+
+  geom_line(aes(y = mean), color = "slateblue4", linewidth = 0.8)+
+  theme_bw()+
+  labs(y = var[i])+
+  facet_wrap(facets = "escenario")+
+  ggtitle("Absolute change regarding baseline period average (2006-2019)")+
+  theme(text = element_text(size = 15), axis.title.x = element_blank())
+  
+ggsave(plot = plot, filename = paste("figures/absolute_change/", i, "_", vars[i], ".tiff", sep = ""),
+       device = "tiff", dpi = 600, width = 12, height = 10)
+
+
+}
 
 
 
+#### YEAR VALUES PLOT ####
+
+mod_4_rcp45_wb_yr_n <- mod_4_rcp45_wb_yr    %>% cbind(escenario = "RCP 4.5")
+mod_6_rcp45_wb_yr_n <- mod_6_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5")
+mod_7_rcp45_wb_yr_n <- mod_7_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5")
+mod_9_rcp45_wb_yr_n <- mod_9_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5")
+mod_14_rcp45_wb_yr_n <- mod_14_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5")
+mod_4_rcp85_wb_yr_n <- mod_4_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5")
+mod_6_rcp85_wb_yr_n <- mod_6_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5")
+mod_7_rcp85_wb_yr_n <- mod_7_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5")
+mod_9_rcp85_wb_yr_n <- mod_9_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5")
+mod_14_rcp85_wb_yr_n <- mod_14_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5")
+
+
+year_values <- mod_4_rcp45_wb_yr_n %>% 
+  rbind(., mod_6_rcp45_wb_yr_n) %>%  
+  rbind(., mod_7_rcp45_wb_yr_n) %>%  
+  rbind(., mod_9_rcp45_wb_yr_n) %>%  
+  rbind(., mod_14_rcp45_wb_yr_n) %>% 
+  rbind(., mod_4_rcp85_wb_yr_n) %>%  
+  rbind(., mod_6_rcp85_wb_yr_n) %>%  
+  rbind(., mod_7_rcp85_wb_yr_n) %>%  
+  rbind(., mod_9_rcp85_wb_yr_n) %>%  
+  rbind(., mod_14_rcp85_wb_yr_n)
 
 
 
+min_val <- year_values %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ min(.)) %>% 
+  mutate(statis = "minimum")
+
+max_val<- year_values %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ max(.))%>% 
+  mutate(statis = "maximum")
+
+mean_val <- year_values %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ mean(.))%>% 
+  mutate(statis = "mean")
 
 
+wider_values <- min_val %>% rbind(., max_val) %>% rbind(., mean_val) %>% 
+  pivot_wider(., names_from = statis, values_from = c("precip", "et", "pet",
+                                                        "perc", "rchrg",  "wyld",  "surq",  "latq", "gwflo" ))
+
+
+
+vars <- colnames(wider_values) %>% tibble() %>% #mutate(vars =str_remove(., "_chg_")) %>% 
+  mutate(vars = str_remove(., "_maximum")) %>% 
+  mutate(vars = str_remove(vars, "_minimum")) %>% 
+  mutate(vars = str_remove(vars, "_mean"))
+
+vars <- unique(vars$vars) %>% .[-c(1,2)]
+
+
+for(i in 1:length(vars)){
+
+  var <- c("Precipitation (mm)", "Evapotranspiration (mm)", "Potential evapotranspiration (mm)", "Percolation (mm)",
+           "Recharge (mm)", "Water yield (mm)", "Surface runoff (mm)", "Lateral flow (mm)", "Groundwater flow (mm)")
+  
+var_tab <- wider_values %>% select(., c(year, escenario,starts_with(vars[i]))) 
+colnames(var_tab) <- c("year","escenario", "minimum", "maximum", "mean")
+
+
+plot <- var_tab %>% ggplot(., aes(x = year))+
+  geom_ribbon(aes(ymin = minimum, ymax = maximum),fill = "gray84", alpha = 0.5)+
+  geom_line(aes(y = mean), color = "gray21", linewidth = 0.8)+
+  theme_bw()+
+  labs(y = var[i])+
+  facet_wrap(facets = "escenario")+
+  ggtitle("Absolute values")+
+  theme(text = element_text(size = 15), axis.title.x = element_blank())
+  
+ggsave(plot = plot, filename = paste("figures/absolute_values/", i, "_", vars[i], ".tiff", sep = ""),
+       device = "tiff", dpi = 600, width = 12, height = 10)
+
+
+}
+
+
+#### YEAR VALUES PLOT --> Individual lines for each model ####
+
+mod_4_rcp45_wb_yr_nm <- mod_4_rcp45_wb_yr    %>% cbind(escenario = "RCP 4.5", model = "mod_4")
+mod_6_rcp45_wb_yr_nm <- mod_6_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_6")
+mod_7_rcp45_wb_yr_nm <- mod_7_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_7")
+mod_9_rcp45_wb_yr_nm <- mod_9_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_9")
+mod_14_rcp45_wb_yr_nm <- mod_14_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_14")
+mod_4_rcp85_wb_yr_nm <- mod_4_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_4")
+mod_6_rcp85_wb_yr_nm <- mod_6_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_6")
+mod_7_rcp85_wb_yr_nm <- mod_7_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_7")
+mod_9_rcp85_wb_yr_nm <- mod_9_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_9")
+mod_14_rcp85_wb_yr_nm <- mod_14_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_14")
+
+
+year_values_ind <- mod_4_rcp45_wb_yr_nm %>% 
+  rbind(., mod_6_rcp45_wb_yr_nm) %>%  
+  rbind(., mod_7_rcp45_wb_yr_nm) %>%  
+  rbind(., mod_9_rcp45_wb_yr_nm) %>%  
+  rbind(., mod_14_rcp45_wb_yr_nm) %>% 
+  rbind(., mod_4_rcp85_wb_yr_nm) %>%  
+  rbind(., mod_6_rcp85_wb_yr_nm) %>%  
+  rbind(., mod_7_rcp85_wb_yr_nm) %>%  
+  rbind(., mod_9_rcp85_wb_yr_nm) %>%  
+  rbind(., mod_14_rcp85_wb_yr_nm)
+
+
+
+min_val <- year_values_ind %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ min(.)) %>% 
+  mutate(statis = "minimum")
+
+max_val<- year_values_ind %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ max(.))%>% 
+  mutate(statis = "maximum")
+
+mean_val <- year_values_ind %>% 
+  group_by(year, escenario) %>% 
+  summarise_at(., c("precip", "et", "pet", "perc",
+                    "rchrg", "wyld", "surq", "latq", "gwflo"), ~ mean(.))%>% 
+  mutate(statis = "mean")
+
+
+longer_values_ind <- year_values_ind %>% pivot_longer(., -c("year","periodo", "escenario", "model" ), names_to = "variable")
+  
+
+
+vars <- unique(longer_values_ind$variable)
+
+
+for(i in 1:length(vars)){
+  
+  var <- c("Precipitation (mm)", "Evapotranspiration (mm)", "Potential evapotranspiration (mm)", "Percolation (mm)",
+           "Recharge (mm)", "Water yield (mm)", "Surface runoff (mm)", "Lateral flow (mm)", "Groundwater flow (mm)")
+
+  
+   var_tab <- longer_values_ind %>% select(., c(year, escenario, model, variable, value) ) %>% 
+    filter(., variable == vars[i])
+  
+
+  min <- min_val %>% select(year, vars[i], escenario) %>% rename(min = vars[i])
+  max <- max_val %>% select(year, vars[i], escenario)%>% rename(max = vars[i])
+  mean <- mean_val %>% select(year, vars[i], escenario)%>% rename(mean = vars[i])
+  
+  
+  var_tab_ind <- var_tab %>% left_join(., min, c("escenario", "year")) %>% 
+    left_join(., max, c("escenario", "year")) %>% 
+    left_join(., mean, c("escenario", "year"))
+
+  
+  plot <- var_tab_ind %>% mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+    ggplot(., aes(x = year))+
+    geom_ribbon(aes(ymin = min, ymax = max),fill = "grey80", alpha = 0.8, color = "black")+
+    geom_line(aes(y = value, color = model))+
+    geom_line(aes(y = mean), color = "black", linewidth = 1, linetype = 2)+
+    scale_linetype_manual(values =  c(2,1))+
+    scale_color_manual(values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+    theme_bw()+
+    facet_wrap(facets = "escenario")+
+    labs(y = var[i], color = "Model")+
+   # ggtitle("Absolute values")+
+    theme(text = element_text(size = 15), axis.title.x = element_blank())
+  
+  
+  p_plotly <- ggplotly(plot)
+  
+  boxplots <- var_tab_ind %>%  mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+    ggplot(., aes(x = escenario))+
+    geom_boxplot(aes(y = value, fill = model))+
+    theme_bw()+
+    labs(y = var[i], fill = "Model", x = "Climate change scenario")+
+    theme(text = element_text(size = 15))+
+    scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+    ggtitle(paste("Average annual value distribution: ", var[i], sep = ""))
+  
+  
+  ggsave(plot = plot, filename = paste("figures/individual_proyections/", i, "_", vars[i], ".tiff", sep = ""),
+         device = "tiff", dpi = 600, width = 12, height = 10)
+  
+  ggsave(plot = boxplots, filename = paste("figures/individual_proyections/", i, "_boxplot_", vars[i], ".tiff", sep = ""),
+         device = "tiff", dpi = 600, width = 12, height = 10)
+  
+  htmlwidgets::saveWidget(p_plotly, file = paste("figures/individual_proyections/interactive/", i, "_", vars[i], ".html", sep = ""))
+  
+  
+  
+}
+
+
+varsnames <- tibble(vars,
+names = c("Precipitation (mm)", "Evapotranspiration (mm)", "Potential evapotranspiration (mm)", "Percolation (mm)",
+                "Recharge (mm)", "Water yield (mm)", "Surface runoff (mm)", "Lateral flow (mm)", "Groundwater flow (mm)"))
+
+  longer_values_ind %>% 
+    ggplot(., aes(x= escenario, y = value))+
+    geom_boxplot(aes(fill = model))+
+    scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+    facet_wrap(facets = "variable", scales = "free", labeller = as_labeller(varsnames))+
+    labs(fill = "Model", x = "Climate change scenario")+
+    theme_bw()
 
