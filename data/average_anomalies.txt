@@ -1,0 +1,7 @@
+escenario periodo pcp_anom et_anom pet_anom perc_anom rchrg_anom total_flow_anom surq_anom latq_anom gwflocha_anom gwflores_anom totalgwflo_anom res_floin_anom
+RCP 4.5 baseline 0 0 0 0 0 0 0 0 0 NA 0 0
+RCP 4.5 midterm -0.086 -0.0726 0.0444 0.1618 0.2288 0.0258 0.2408 -0.1244 0.1522 Inf 0.1648 0.0242
+RCP 4.5 longterm -0.081 -0.0682 0.0562 0.138 0.1964 -0.0114 0.1726 -0.1652 0.155 Inf 0.1714 -0.0204
+RCP 8.5 baseline 0 0 0 0 0 0 0 0 0 NA 0 0
+RCP 8.5 midterm -0.1106 -0.1094 0.0614 -0.0932 -0.0676 -0.1544 0.00500000000000001 -0.2826 -0.1074 Inf -0.088 -0.1772
+RCP 8.5 longterm -0.2062 -0.1924 0.1294 -0.246 -0.2308 -0.2658 -0.1184 -0.3676 -0.2554 Inf -0.2428 -0.2866

@@ -73,11 +73,11 @@ mod_4_rcp45_wb_yrmon <- mod_4_rcp45_wb %>% left_join(., mod_4_rcp45_basinaqu_wb,
 
 
 mod_4_rcp45_reservoir_yr <- mod_4_rcp45_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenairo = "RCP 4.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenario = "RCP 4.5")
   
 mod_4_rcp45_reservoir_yrmon <-  mod_4_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenairo = "RCP 4.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenario = "RCP 4.5")
 
 
 
@@ -273,11 +273,11 @@ mod_6_rcp45_wb_yrmon <- mod_6_rcp45_wb %>% left_join(., mod_6_rcp45_basinaqu_wb,
 
 
 mod_6_rcp45_reservoir_yr <- mod_6_rcp45_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenairo = "RCP 4.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenario = "RCP 4.5")
 
 mod_6_rcp45_reservoir_yrmon <-  mod_6_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenairo = "RCP 4.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenario = "RCP 4.5")
 
 
 
@@ -477,11 +477,11 @@ mod_7_rcp45_wb_yrmon <- mod_7_rcp45_wb %>% left_join(., mod_7_rcp45_basinaqu_wb,
 
 
 mod_7_rcp45_reservoir_yr <- mod_7_rcp45_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenairo = "RCP 4.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenario = "RCP 4.5")
 
 mod_7_rcp45_reservoir_yrmon <-  mod_7_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenairo = "RCP 4.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenario = "RCP 4.5")
 
 
 
@@ -684,11 +684,11 @@ mod_9_rcp45_wb_yrmon <- mod_9_rcp45_wb %>% left_join(., mod_9_rcp45_basinaqu_wb,
 
 
 mod_9_rcp45_reservoir_yr <- mod_9_rcp45_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenairo = "RCP 4.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenario = "RCP 4.5")
 
 mod_9_rcp45_reservoir_yrmon <-  mod_9_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenairo = "RCP 4.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenario = "RCP 4.5")
 
 
 
@@ -888,11 +888,11 @@ mod_14_rcp45_wb_yrmon <- mod_14_rcp45_wb %>% left_join(., mod_14_rcp45_basinaqu_
 
 
 mod_14_rcp45_reservoir_yr <- mod_14_rcp45_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenairo = "RCP 4.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenario = "RCP 4.5")
 
 mod_14_rcp45_reservoir_yrmon <-  mod_14_rcp45_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenairo = "RCP 4.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenario = "RCP 4.5")
 
 
 
@@ -1029,7 +1029,7 @@ mod_14_rcp45_month_chg <- mod_14_rcp45_wb_yrmon %>%
 
 # Periods definition
 
-# rm(list = ls())
+rm(list = ls())
 
 baseline_period <- 2006:2019
 midterm_period <- 2046:2065
@@ -1097,11 +1097,11 @@ mod_4_rcp85_wb_yrmon <- mod_4_rcp85_wb %>% left_join(., mod_4_rcp85_basinaqu_wb,
 
 
 mod_4_rcp85_reservoir_yr <- mod_4_rcp85_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenairo = "RCP 8.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 4, escenario = "RCP 8.5")
 
 mod_4_rcp85_reservoir_yrmon <-  mod_4_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenairo = "RCP 8.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 4, escenario = "RCP 8.5")
 
 
 
@@ -1303,11 +1303,11 @@ mod_6_rcp85_wb_yrmon <- mod_6_rcp85_wb %>% left_join(., mod_6_rcp85_basinaqu_wb,
 
 
 mod_6_rcp85_reservoir_yr <- mod_6_rcp85_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenairo = "RCP 8.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 6, escenario = "RCP 8.5")
 
 mod_6_rcp85_reservoir_yrmon <-  mod_6_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenairo = "RCP 8.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 6, escenario = "RCP 8.5")
 
 
 
@@ -1506,11 +1506,11 @@ mod_7_rcp85_wb_yrmon <- mod_7_rcp85_wb %>% left_join(., mod_7_rcp85_basinaqu_wb,
 
 
 mod_7_rcp85_reservoir_yr <- mod_7_rcp85_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenairo = "RCP 8.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 7, escenario = "RCP 8.5")
 
 mod_7_rcp85_reservoir_yrmon <-  mod_7_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenairo = "RCP 8.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 7, escenario = "RCP 8.5")
 
 
 
@@ -1709,11 +1709,11 @@ mod_9_rcp85_wb_yrmon <- mod_9_rcp85_wb %>% left_join(., mod_9_rcp85_basinaqu_wb,
 
 
 mod_9_rcp85_reservoir_yr <- mod_9_rcp85_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenairo = "RCP 8.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 9, escenario = "RCP 8.5")
 
 mod_9_rcp85_reservoir_yrmon <-  mod_9_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenairo = "RCP 8.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 9, escenario = "RCP 8.5")
 
 
 
@@ -1915,11 +1915,11 @@ mod_14_rcp85_wb_yrmon <- mod_14_rcp85_wb %>% left_join(., mod_14_rcp85_basinaqu_
 
 
 mod_14_rcp85_reservoir_yr <- mod_14_rcp85_reservoir %>% group_by(year = year(date)) %>% 
-  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenairo = "RCP 8.5")
+  summarise(floin_yr = sum(flo_in)/1000000) %>% .[,c("year", "floin_yr")] %>% mutate(model = 14, escenario = "RCP 8.5")
 
 mod_14_rcp85_reservoir_yrmon <-  mod_14_rcp85_reservoir %>% group_by(year(date), month(date)) %>% 
   summarise(floin_monyr = sum(flo_in)/1000000) %>% mutate(monyear = ym(paste(`year(date)`, `month(date)`))) %>% 
-  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenairo = "RCP 8.5")
+  .[,c("monyear", "floin_monyr")] %>% mutate(model = 14, escenario = "RCP 8.5")
 
 
 
@@ -2056,6 +2056,220 @@ mod_14_rcp85_month_chg <- mod_14_rcp85_wb_yrmon %>%
 #### Merging results ####
 
 
+absolute_values_escenarios_mod4_esc45 <- average_wb_periods_mod_4_rcp45 %>% mutate(scenario = "RCP 4.5", model = "mod_4")
+absolute_values_escenarios_mod6_esc45 <- average_wb_periods_mod_6_rcp45%>% mutate(scenario = "RCP 4.5", model = "mod_6")
+absolute_values_escenarios_mod7_esc45 <- average_wb_periods_mod_7_rcp45%>% mutate(scenario = "RCP 4.5", model = "mod_7")
+absolute_values_escenarios_mod9_esc45 <- average_wb_periods_mod_9_rcp45%>% mutate(scenario = "RCP 4.5", model = "mod_9")
+absolute_values_escenarios_mod14_esc45 <- average_wb_periods_mod_14_rcp45 %>% mutate(scenario = "RCP 4.5", model = "mod_14")
+absolute_values_escenarios_mod4_esc85 <- average_wb_periods_mod_4_rcp85%>% mutate(scenario = "RCP 8.5", model = "mod_4")
+absolute_values_escenarios_mod6_esc85 <- average_wb_periods_mod_6_rcp85%>% mutate(scenario = "RCP 8.5", model = "mod_6")
+absolute_values_escenarios_mod7_esc85 <- average_wb_periods_mod_7_rcp85%>% mutate(scenario = "RCP 8.5", model = "mod_7")
+absolute_values_escenarios_mod9_esc85 <- average_wb_periods_mod_9_rcp85%>% mutate(scenario = "RCP 8.5", model = "mod_9")
+absolute_values_escenarios_mod14_esc85 <- average_wb_periods_mod_14_rcp85 %>% mutate(scenario = "RCP 8.5", model = "mod_14")
+
+
+absolute_values_allmodels <- 
+  absolute_values_escenarios_mod4_esc45 %>% 
+  rbind(., absolute_values_escenarios_mod6_esc45 ) %>%  
+  rbind(., absolute_values_escenarios_mod7_esc45 ) %>%  
+  rbind(., absolute_values_escenarios_mod9_esc45 ) %>%  
+  rbind(., absolute_values_escenarios_mod14_esc45) %>% 
+  rbind(., absolute_values_escenarios_mod4_esc85 ) %>%  
+  rbind(., absolute_values_escenarios_mod6_esc85 ) %>%  
+  rbind(., absolute_values_escenarios_mod7_esc85 ) %>%  
+  rbind(., absolute_values_escenarios_mod9_esc85 ) %>%  
+  rbind(., absolute_values_escenarios_mod14_esc85)
+
+
+
+#### Reservoir values ####
+
+area_dren <- 367943566
+
+
+floin_mod4_45 <- mod_4_rcp45_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod6_45 <- mod_6_rcp45_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod7_45 <- mod_7_rcp45_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod9_45 <- mod_9_rcp45_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+floin_mod14_45 <- mod_14_rcp45_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod4_85 <- mod_4_rcp85_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod6_85 <- mod_6_rcp85_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod7_85 <- mod_7_rcp85_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+floin_mod9_85 <- mod_9_rcp85_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+floin_mod14_85 <- mod_14_rcp85_reservoir_yr %>% mutate(floin_mm = (floin_yr  * 1e9) / area_dren)%>% 
+  mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                             year %in% midterm_period ~ "midterm", 
+                             year %in% longterm_period ~ "longterm", 
+                             .default = "other")) %>% 
+  #filter(., periodo != "other") %>% 
+  mutate(periodo = factor(periodo, levels = (c("baseline", "midterm", "longterm", "other")))) %>% 
+  group_by(periodo) %>% 
+  summarise(floin_res = mean(floin_mm))
+
+
+
+res_in_mod4_45 <- floin_mod4_45  %>%  mutate(model = "mod_4", scenario = "RCP 4.5")
+res_in_mod6_45 <- floin_mod6_45 %>%  mutate(model = "mod_6", scenario = "RCP 4.5")
+res_in_mod7_45 <- floin_mod7_45 %>%  mutate(model = "mod_7", scenario = "RCP 4.5")
+res_in_mod9_45 <- floin_mod9_45 %>%  mutate(model = "mod_9", scenario = "RCP 4.5")
+res_in_mod14_45 <- floin_mod14_45 %>%  mutate(model = "mod_14", scenario = "RCP 4.5")
+res_in_mod4_85 <- floin_mod4_85 %>%  mutate(model = "mod_4", scenario = "RCP 8.5")
+res_in_mod6_85 <- floin_mod6_85 %>%  mutate(model = "mod_6", scenario = "RCP 8.5")
+res_in_mod7_85 <- floin_mod7_85 %>%  mutate(model = "mod_7", scenario = "RCP 8.5")
+res_in_mod9_85 <- floin_mod9_85 %>%  mutate(model = "mod_9", scenario = "RCP 8.5")
+res_in_mod14_85 <- floin_mod14_85 %>%  mutate(model = "mod_14", scenario = "RCP 8.5")
+
+
+abs_floin_values <- 
+  res_in_mod4_45 %>% 
+  rbind(., res_in_mod6_45 ) %>%  
+  rbind(., res_in_mod7_45 ) %>%  
+  rbind(., res_in_mod9_45 ) %>%  
+  rbind(., res_in_mod14_45) %>% 
+  rbind(., res_in_mod4_85 ) %>%  
+  rbind(., res_in_mod6_85 ) %>%  
+  rbind(., res_in_mod7_85 ) %>%  
+  rbind(., res_in_mod9_85 ) %>%  
+  rbind(., res_in_mod14_85)
+
+
+
+absolute_values_allmodels <- absolute_values_allmodels %>% left_join(., abs_floin_values, c("periodo","model", "scenario")) #%>% 
+  #write.table(.,"C:/ASG/Guajaraz_modelo/Txt_In_Out_CClimatico/table_wb_variables_resin.txt" , quote = F, col.names = F)
+
+
+
+
+
+
+
+
+
+
+ref_values_mod_4_45_n  <- ref_values_mod_4_45  %>% mutate(scenario = "RCP 4.5")
+ref_values_mod_6_45_n  <- ref_values_mod_6_45 %>% mutate(scenario = "RCP 4.5")
+ref_values_mod_7_45_n  <- ref_values_mod_7_45 %>% mutate(scenario = "RCP 4.5")
+ref_values_mod_9_45_n  <- ref_values_mod_9_45 %>% mutate(scenario = "RCP 4.5")
+ref_values_mod_14_45_n <- ref_values_mod_14_45 %>% mutate(scenario = "RCP 4.5")
+ref_values_mod_4_85_n  <- ref_values_mod_4_85 %>% mutate(scenario = "RCP 8.5")
+ref_values_mod_6_85_n  <- ref_values_mod_6_85 %>% mutate(scenario = "RCP 8.5")
+ref_values_mod_7_85_n  <- ref_values_mod_7_85 %>% mutate(scenario = "RCP 8.5")
+ref_values_mod_9_85_n  <- ref_values_mod_9_85 %>% mutate(scenario = "RCP 8.5")
+ref_values_mod_14_85_n <- ref_values_mod_14_85 %>% mutate(scenario = "RCP 8.5")
+
+
+
+
+reference_values <- 
+           ref_values_mod_4_45_n %>% 
+  rbind(., ref_values_mod_6_45_n) %>%  
+  rbind(., ref_values_mod_7_45_n) %>%  
+  rbind(., ref_values_mod_9_45_n) %>%  
+  rbind(., ref_values_mod_14_45_n) %>% 
+  rbind(., ref_values_mod_4_85_n) %>%  
+  rbind(., ref_values_mod_6_85_n) %>%  
+  rbind(., ref_values_mod_7_85_n) %>%  
+  rbind(., ref_values_mod_9_85_n) %>%  
+  rbind(., ref_values_mod_14_85_n)
+  
+
+
+baseline_resin_value <- abs_floin_values %>% filter(periodo == "baseline") %>% .[,"floin_res"]
+
+reference_values <- reference_values %>% mutate(reservoir_floin = baseline_resin_value$floin_res)
+  
+reference_values_escenarios <- reference_values %>% group_by(scenario) %>% 
+  summarise_at(c("precip", "et", "pet", "perc", "rchrg", "wyld", "surq",  "latq", "gwflo", "reservoir_floin"), ~mean(.))
+
+
 
 average_anomalies <- mod_4_45_average_anomalies %>% 
   rbind(., mod_6_45_average_anomalies) %>%  
@@ -2068,7 +2282,8 @@ average_anomalies <- mod_4_45_average_anomalies %>%
   rbind(., mod_9_85_average_anomalies) %>%  
   rbind(., mod_14_85_average_anomalies)
 
-average_anomalies %>% group_by(escenario, periodo) %>% 
+average_anomalies %>% #filter(., model != 9) %>% 
+  group_by(escenario, periodo) %>% 
   summarise(across(ends_with("_anom"), ~mean(.))) %>% 
   filter(., periodo != "other")# %>% write.table("average_anomalies.txt", quote = F, row.names = F)
 
@@ -2083,6 +2298,18 @@ average_changes <- mod_4_45_average_changes %>%
   rbind(., mod_7_85_average_changes) %>%  
   rbind(., mod_9_85_average_changes) %>%  
   rbind(., mod_14_85_average_changes)
+
+
+
+average_changes %>% #filter(., model != 9) %>% 
+  group_by(escenario, periodo) %>% 
+  summarise(across(ends_with("_chg"), ~mean(.))) %>% 
+  filter(., periodo != "other")# %>% write.table("average_changes.txt", quote = F, row.names = F)
+
+average_changes %>% #filter(., model != 9) %>% 
+  group_by(escenario, periodo) %>% 
+  summarise_at(c("precip", "et", "pet", "perc", "rchrg" , "wyld","surq",  "latq", "gwflo"), ~mean(.)) %>% 
+  filter(., periodo != "other")# %>% write.table("average_values.txt", quote = F, row.names = F)
 
 
 year_anomalies <- mod_4_45_year_anomalies %>% 
@@ -2189,13 +2416,51 @@ plot <- var_tab %>% ggplot(., aes(x = year))+
   facet_wrap(facets = "escenario")+
   ggtitle("Relative change regarding baseline period average (2006-2019)")+
   theme(text = element_text(size = 15), axis.title.x = element_blank())
-  
+
+
 ggsave(plot = plot, filename = paste("figures/relative_change/", i, "_", vars[i], ".tiff", sep = ""),
        device = "tiff", dpi = 600, width = 12, height = 10)
 
 
 }
 
+  # Boxplots anomalies in periods
+
+for(i in 1:length(vars)){
+  
+  var <- c("Precipitation", "Evapotranspiration", "Potential evapotranspiration", "Percolation",
+           "Recharge", "Water yield", "Surface runoff", "Lateral flow", "Groundwater flow")
+  
+  var_tab <- year_anomalies %>% select(., c(year, escenario,model, starts_with(vars[i]) )) %>% 
+    select(., year, escenario,model,ends_with("_anom")) %>% 
+    mutate(model = paste("mod_", model, sep = "")) %>% 
+    mutate(periodo= case_when(year %in% baseline_period ~ "baseline", 
+            year %in% midterm_period ~ "midterm", 
+            year %in% longterm_period ~ "longterm", 
+            .default = "other")) %>% 
+    mutate(periodo = factor(periodo, levels = c("baseline", "midterm", "longterm"), 
+                            labels = c("Baseline (2006-2019)", "Mid term (2046-2065)", "Long term (2080-2099)"))) %>% 
+    filter(., periodo != "other") 
+  
+  colnames(var_tab) <- c("year","escenario", "model", "var", "periodo")
+
+
+
+boxplots <- var_tab %>% mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+  ggplot(., aes(x = periodo))+
+  geom_boxplot(aes(y = var, fill = model ))+
+  theme_bw()+
+  labs(y = var[i], fill = "Model", x = "Climate change scenario")+
+  theme(text = element_text(size = 15))+
+  facet_wrap(facets = "escenario", scales = "free")+
+  scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+  ggtitle(paste("Average annual anomalies distribution: ", var[i], sep = ""))
+
+
+ggsave(plot = boxplots, filename = paste("figures/relative_change/boxplot_anomalies/", i, "_boxplot_", vars[i], ".tiff", sep = ""),
+       device = "tiff", dpi = 600, width = 14, height = 10)
+
+}
 
 
 #### YEAR CHANGES PLOT ####
@@ -2269,6 +2534,61 @@ ggsave(plot = plot, filename = paste("figures/absolute_change/", i, "_", vars[i]
 
 
 }
+
+
+
+
+  # Boxplots anomalies in periods
+
+for(i in 1:length(vars)){
+  
+  var <- c("Precipitation", "Evapotranspiration", "Potential evapotranspiration", "Percolation",
+           "Recharge", "Water yield", "Surface runoff", "Lateral flow", "Groundwater flow")
+  
+  var_tab <- year_anomalies %>% select(., c(year, escenario,model, starts_with(vars[i]) )) %>% 
+    select(., year, escenario,model,ends_with("_anom")) %>% 
+    mutate(model = paste("mod_", model, sep = "")) %>% 
+    mutate(periodo= case_when(year %in% baseline_period ~ "baseline", 
+            year %in% midterm_period ~ "midterm", 
+            year %in% longterm_period ~ "longterm", 
+            .default = "other")) %>% 
+    mutate(periodo = factor(periodo, levels = c("baseline", "midterm", "longterm"), 
+                            labels = c("Baseline (2006-2019)", "Mid term (2046-2065)", "Long term (2080-2099)"))) %>% 
+    filter(., periodo != "other") 
+  
+  colnames(var_tab) <- c("year","escenario", "model", "var", "periodo")
+
+
+
+boxplots <- var_tab %>% mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+  ggplot(., aes(x = periodo))+
+  geom_boxplot(aes(y = var, fill = model ))+
+  theme_bw()+
+  labs(y = var[i], fill = "Model", x = "Climate change scenario")+
+  theme(text = element_text(size = 15))+
+  facet_wrap(facets = "escenario", scales = "free")+
+  scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+  ggtitle(paste("Average annual anomalies distribution: ", var[i], sep = ""))
+
+
+ggsave(plot = boxplots, filename = paste("figures/relative_change/boxplot_anomalies/", i, "_boxplot_", vars[i], ".tiff", sep = ""),
+       device = "tiff", dpi = 600, width = 14, height = 10)
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2446,15 +2766,31 @@ for(i in 1:length(vars)){
   
   p_plotly <- ggplotly(plot)
   
+  
   boxplots <- var_tab_ind %>%  mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
-    ggplot(., aes(x = escenario))+
+    mutate(periodo = case_when(year %in% baseline_period ~ "baseline", 
+                               year %in% midterm_period ~ "midterm", 
+                               year %in% longterm_period ~ "longterm", 
+                               .default = "other")) %>% 
+    mutate(periodo = factor(periodo, levels = c("baseline", "midterm", "longterm"), labels = c("Baseline (2006-2019)", "Mid term (2046-2065)", "Long term (2080-2099)"))) %>% 
+    filter(., periodo != "other") %>% 
+    ggplot(., aes(x = periodo))+
     geom_boxplot(aes(y = value, fill = model))+
     theme_bw()+
     labs(y = var[i], fill = "Model", x = "Climate change scenario")+
     theme(text = element_text(size = 15))+
+    facet_wrap(facets = "escenario", scales = "free")+
     scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
     ggtitle(paste("Average annual value distribution: ", var[i], sep = ""))
-  
+ # boxplots <- var_tab_ind %>%  mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+ #   ggplot(., aes(x = escenario))+
+ #   geom_boxplot(aes(y = value, fill = model))+
+ #   theme_bw()+
+ #   labs(y = var[i], fill = "Model", x = "Climate change scenario")+
+ #   theme(text = element_text(size = 15))+
+ #   scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+ #   ggtitle(paste("Average annual value distribution: ", var[i], sep = ""))
+ # 
   
   ggsave(plot = plot, filename = paste("figures/individual_proyections/", i, "_", vars[i], ".tiff", sep = ""),
          device = "tiff", dpi = 600, width = 12, height = 10)
@@ -2481,3 +2817,120 @@ names = c("Precipitation (mm)", "Evapotranspiration (mm)", "Potential evapotrans
     labs(fill = "Model", x = "Climate change scenario")+
     theme_bw()
 
+  
+  # Anomalies regarding average baseline period values
+  
+  colnames(reference_values_escenarios ) <- c( "escenario", "precip_ref", "et_ref", "pet_ref",
+                                               "perc_ref", "rchrg_ref",  "wyld_ref",  "surq_ref",  "latq_ref", "gwflo_ref")
+  
+  
+  mod_4_rcp45_wb_yr_nn <- mod_4_rcp45_wb_yr    %>% cbind(escenario = "RCP 4.5", model = "mod_4")
+  mod_6_rcp45_wb_yr_nn <- mod_6_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_6")
+  mod_7_rcp45_wb_yr_nn <- mod_7_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_7")
+  mod_9_rcp45_wb_yr_nn <- mod_9_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_9")
+  mod_14_rcp45_wb_yr_nn <- mod_14_rcp45_wb_yr %>% cbind(escenario = "RCP 4.5", model = "mod_14")
+  mod_4_rcp85_wb_yr_nn <- mod_4_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_4")
+  mod_6_rcp85_wb_yr_nn <- mod_6_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_6")
+  mod_7_rcp85_wb_yr_nn <- mod_7_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_7")
+  mod_9_rcp85_wb_yr_nn <- mod_9_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_9")
+  mod_14_rcp85_wb_yr_nn <- mod_14_rcp85_wb_yr %>% cbind(escenario = "RCP 8.5", model = "mod_14")
+  
+  
+  year_anomaly_refvalues <- mod_4_rcp45_wb_yr_nn %>% 
+    rbind(., mod_6_rcp45_wb_yr_nn) %>%  
+    rbind(., mod_7_rcp45_wb_yr_nn) %>%  
+    rbind(., mod_9_rcp45_wb_yr_nn) %>%  
+    rbind(., mod_14_rcp45_wb_yr_nn) %>% 
+    rbind(., mod_4_rcp85_wb_yr_nn) %>%  
+    rbind(., mod_6_rcp85_wb_yr_nn) %>%  
+    rbind(., mod_7_rcp85_wb_yr_nn) %>%  
+    rbind(., mod_9_rcp85_wb_yr_nn) %>%  
+    rbind(., mod_14_rcp85_wb_yr_nn) %>% 
+    left_join(., reference_values_escenarios, "escenario" ) %>% 
+    mutate(
+      pcp_anomaly_ref = (precip - precip_ref) / precip_ref,
+      et_anomaly_ref = (et - et_ref) / et_ref,
+      pet_anomaly_ref = (pet - pet_ref) / pet_ref,
+      perc_anomaly_ref = (perc - perc_ref) / perc_ref,
+      rchrg_anomaly_ref = (rchrg - rchrg_ref) / rchrg_ref,
+      wyld_anomaly_ref = (wyld - wyld_ref) / wyld_ref,
+      surq_anomaly_ref = (surq - surq_ref) / surq_ref,
+      latq_anomaly_ref = (latq - latq_ref) / latq_ref,
+      gwflo_anomaly_ref = (gwflo - gwflo_ref) / gwflo_ref)
+  
+  
+  
+  
+  # Boxplots anomalies in periods
+  
+  for(i in 1:length(vars)){
+    
+    var <- c("Precipitation", "Evapotranspiration", "Potential evapotranspiration", "Percolation",
+             "Recharge", "Water yield", "Surface runoff", "Lateral flow", "Groundwater flow")
+    
+    var_tab <- year_anomaly_refvalues %>% select(., c(year, escenario,model, starts_with(vars[i]) )) %>% 
+      select(., year, escenario,model,ends_with("y_ref")) %>% 
+      #mutate(model = paste("mod_", model, sep = "")) %>% 
+      mutate(periodo= case_when(year %in% baseline_period ~ "baseline", 
+                                year %in% midterm_period ~ "midterm", 
+                                year %in% longterm_period ~ "longterm", 
+                                .default = "other")) %>% 
+      mutate(periodo = factor(periodo, levels = c("baseline", "midterm", "longterm"), 
+                              labels = c("Baseline (2006-2019)", "Mid term (2046-2065)", "Long term (2080-2099)"))) %>% 
+      filter(., periodo != "other") 
+    
+    colnames(var_tab) <- c("year","escenario", "model", "var", "periodo")
+    
+    
+    
+    boxplots <- var_tab %>% mutate(model = factor(model, levels = c("mod_4","mod_6","mod_7","mod_9","mod_14"))) %>% 
+      ggplot(., aes(x = periodo))+
+      geom_boxplot(aes(y = var, fill = model ))+
+      theme_bw()+
+      labs(y = var[i], fill = "Model", x = "Climate change scenario")+
+      theme(text = element_text(size = 15))+
+      facet_wrap(facets = "escenario", scales = "free")+
+      scale_fill_manual( values = c("deeppink2", "goldenrod1", "cadetblue1", "brown1", "mediumorchid3") )+
+      ggtitle(paste("Average annual anomalies distribution: ", var[i], sep = ""))
+    
+    
+    ggsave(plot = boxplots, filename = paste("figures/relative_change/boxplot_anomalies/anomalies_refvalues/", i, "_boxplot_refanom_", vars[i], ".tiff", sep = ""),
+           device = "tiff", dpi = 600, width = 14, height = 10)
+    
+  }
+  
+  
+  
+  # Percentage change regarding reference baseline values
+  
+  
+  abs_var <- average_changes %>% #filter(., model != 9) %>% 
+    group_by(escenario, periodo) %>% 
+    summarise(across(ends_with("_chg"), ~mean(.))) %>% 
+    filter(., periodo != "other")
+  
+  
+  
+  lfm <- abs_var %>% left_join(., reference_values_escenarios, "scenario") %>% 
+    filter(., !periodo == "baseline") %>% 
+    mutate(
+      porc_chg_pcp = -100*(1-(precip_ref + pcp_chg) / precip_ref),  # (pcp_chg*100 / precip_ref)
+      porc_chg_et = -100*(1-(et_ref + et_chg) / et_ref),
+      porc_chg_pet = -100*(1-(pet_ref + pet_chg) / pet_ref),
+      porc_chg_perc = -100*(1-(perc_ref + perc_chg) / perc_ref),
+      porc_chg_rchrg = -100*(1-(rchrg_ref + rchrg_chg) / rchrg_ref),
+      porc_chg_wyld = -100*(1-(wyld_ref + wyld_chg) / wyld_ref),
+      porc_chg_surq = -100*(1-(surq_ref + surq_chg) / surq_ref),
+      porc_chg_latq = -100*(1-(latq_ref + latq_chg) / latq_ref),
+      porc_chg_gwflo = -100*(1-(gwflo_ref + gwflo_chg) / gwflo_ref)) %>% 
+    select(escenario, periodo, starts_with("porc"))
+  
+  
+  
+  write.table(lfm, file = "percentage_chg_regarding_reference_baseline.txt", quote = F, row.names = F)
+  
+  
+  
+  
+  
+  

@@ -1,0 +1,7 @@
+escenario periodo pcp_chg et_chg pet_chg perc_chg rchrg_chg totalflo_chg surq_chg latq_chg gwflocha_chg gwflores_chg totalgwflo_chg res_floin_chg
+RCP 4.5 baseline 0 0 0 0 0 0 0 0 0 0 0 0
+RCP 4.5 midterm -39.636 -30.546 72.712 -0.375 -0.579 -3.123 -0.884 -1.886 -0.349 -0.003 -0.352 -3.383
+RCP 4.5 longterm -37.443 -28.984 91.717 -0.22 -0.294 -3.153 -1.063 -1.917 -0.183 0.01 -0.172 -3.442
+RCP 8.5 baseline 0 0 0 0 0 0 0 0 0 0 0 0
+RCP 8.5 midterm -45.401 -42.973 101.238 -0.146 -0.075 -1.767 0.114 -1.774 -0.16 0.053 -0.107 -2.076
+RCP 8.5 longterm -86.408 -76.608 213.745 -0.606 -0.851 -3.486 -0.542 -2.39 -0.585 0.03 -0.554 -3.782
